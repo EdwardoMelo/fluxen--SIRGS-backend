@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env
 logs/
+
+# Podman dev (local optional workflow)
+docker-compose.podman.yml
+src/scripts/wait-for-rabbitmq.podman.js

@@ -2,6 +2,10 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
+const containerRuntime = process.env.RABBITMQ_CONTAINER_RUNTIME || 'docker';
+const containerName =
+  process.env.RABBITMQ_CONTAINER_NAME || 'equipamentos_sirgs_rabbitmq';
+
 async function waitForRabbitMQ(maxAttempts = 30, delay = 2000) {
   console.log('Aguardando RabbitMQ ficar pronto...');
   
@@ -9,7 +13,7 @@ async function waitForRabbitMQ(maxAttempts = 30, delay = 2000) {
     try {
       // Tenta conectar no RabbitMQ
       const { stdout } = await execPromise(
-        'docker exec equipamentos_sirgs_rabbitmq rabbitmq-diagnostics ping'
+        `${containerRuntime} exec ${containerName} rabbitmq-diagnostics ping`
       );
 
       console.log({ stdout });
