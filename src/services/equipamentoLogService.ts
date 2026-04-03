@@ -230,6 +230,30 @@ export class EquipamentoLogService {
     return 'none';
   }
 
+  private buildLogTableColumns(metrics: any[]): any[] {
+    const columnsArray: any[] = [
+      {
+        field: 'timestamp',
+        headerName: 'Timestamp',
+        flex: 1,
+        disableColumnMenu: true,
+        type: 'dateTime'
+      }
+    ];
+    metrics.forEach((metric) => {
+      if (metric.metrica?.nome) {
+        columnsArray.push({
+          field: `metrica_${metric.id_metrica}`,
+          headerName: `${metric.metrica.nome} (${metric.metrica.unidade})`,
+          flex: 1,
+          disableColumnMenu: true,
+          type: 'number'
+        });
+      }
+    });
+    return columnsArray;
+  }
+
   private buildRowsFromGroups(groups: any[], metrics: any[]): any[] {
     return groups.map((group: any) => {
       const row: any = {
@@ -269,6 +293,51 @@ export class EquipamentoLogService {
   ): Promise<any> {
     const metrics = await this.equipamentoMetricaRepository.findByEquipamentoId(id_equipamento);
 
+    const afterGroupId = paginationOptions.afterGroupId;
+    if (
+      afterGroupId !== undefined &&
+      afterGroupId !== null &&
+      !startDate &&
+      !endDate
+    ) {
+      const pageSize = Math.max(Math.min(paginationOptions.pageSize ?? 50, 500), 1);
+      const groups = await this.equipamentoLogRepository.findGroupsAfterGroupId(
+        id_equipamento,
+        afterGroupId,
+        { take: pageSize }
+      );
+      const total = await prisma.equipamento_log_grupo.count({
+        where: { id_equipamento }
+      });
+      const columnsArray = this.buildLogTableColumns(metrics);
+      const rows = this.buildRowsFromGroups(groups, metrics);
+      const { groups: recentGroups } = await this.equipamentoLogRepository.findGroupedByTimestamp(
+        id_equipamento,
+        { page: 1, pageSize: 5 }
+      );
+      const situationRows = this.buildRowsFromGroups(recentGroups, metrics);
+
+      logInfo('Logs table incremental', {
+        rowsLength: rows.length,
+        afterGroupId,
+        id_equipamento
+      });
+
+      return {
+        columns: columnsArray,
+        rows,
+        situation: this.getSituation(situationRows),
+        metrics,
+        pagination: {
+          page: 1,
+          pageSize,
+          totalItems: total,
+          totalPages: total > 0 ? Math.ceil(total / pageSize) : 0,
+          incremental: true
+        }
+      };
+    }
+
     let groups: any[];
     let total: number;
 
@@ -294,28 +363,7 @@ export class EquipamentoLogService {
       total = result.total;
     }
 
-    // Create timestamp column
-    const columnsArray = [
-      {
-        field: 'timestamp',
-        headerName: 'Timestamp',
-        flex: 1,
-        disableColumnMenu: true,
-        type: 'dateTime'
-      }
-    ];
-    // Add metric columns
-    metrics.forEach((metric) => {
-      if (metric.metrica?.nome) {
-        columnsArray.push({
-          field: `metrica_${metric.id_metrica}`,
-          headerName: `${metric.metrica.nome} (${metric.metrica.unidade})`,
-          flex: 1,
-          disableColumnMenu: true,
-          type: 'number'
-        });
-      }
-    });
+    const columnsArray = this.buildLogTableColumns(metrics);
     const rows = this.buildRowsFromGroups(groups, metrics);
 
     let situationRows = rows;

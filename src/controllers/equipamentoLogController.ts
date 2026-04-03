@@ -82,10 +82,21 @@ export class EquipamentoLogController {
       const { id } = req.params;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined;
+      const afterGroupIdRaw = req.query.afterGroupId;
+      const afterGroupId =
+        afterGroupIdRaw !== undefined && afterGroupIdRaw !== ''
+          ? Number(afterGroupIdRaw)
+          : undefined;
+
+      if (afterGroupId !== undefined && (Number.isNaN(afterGroupId) || afterGroupId < 1)) {
+        res.status(400).json({ message: 'afterGroupId inválido (use um número inteiro >= 1)' });
+        return;
+      }
 
       const tableData = await this.equipamentoLogService.getLogsTableData(Number(id), {
         page,
-        pageSize
+        pageSize,
+        afterGroupId
       });
       res.json(tableData);
     } catch (error) {

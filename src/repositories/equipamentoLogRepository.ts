@@ -8,6 +8,8 @@ const prisma = new PrismaClient();
 export interface PaginationOptions {
   page?: number;
   pageSize?: number;
+  /** Quando definido, busca apenas grupos com id maior (registros mais novos que o cursor). */
+  afterGroupId?: number;
 }
 
 export interface GroupedLogsResult {
@@ -76,6 +78,23 @@ export class EquipamentoLogRepository {
     ]);
 
     return { groups, total };
+  }
+
+  /**
+   * Grupos criados após o id informado (id monotônico), mais recentes primeiro.
+   * Usado para refresh incremental na tabela de logs.
+   */
+  async findGroupsAfterGroupId(
+    id_equipamento: number,
+    afterGroupId: number,
+    options: { take?: number } = {}
+  ): Promise<EquipamentoLogGrupo[]> {
+    const take = Math.max(Math.min(options.take ?? 50, 500), 1);
+    return prisma.equipamento_log_grupo.findMany({
+      where: { id_equipamento, id: { gt: afterGroupId } },
+      orderBy: { timestamp: 'desc' },
+      take,
+    });
   }
 
   /**
