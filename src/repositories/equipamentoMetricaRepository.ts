@@ -71,14 +71,12 @@ export class EquipamentoMetricaRepository {
         include: { metrica: true }
       });
     }
-    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      return tx.equipamento_metricas.findFirst({
-        where: {
-          id_equipamento,
-          id_metrica
-        },
-        include: { metrica: true }
-      });
+    return prisma.equipamento_metricas.findFirst({
+      where: {
+        id_equipamento,
+        id_metrica
+      },
+      include: { metrica: true }
     });
   }
 

@@ -8,6 +8,13 @@ const controller = new UsuarioEquipamentoDashboardController();
 
 // Todas as rotas requerem autenticação JWT e validação de tenant
 router.get(
+  '/usuario-equipamento-dashboard/:userId/chart-bundle',
+  authenticateToken,
+  validateTenant,
+  controller.getDashboardChartBundle.bind(controller)
+);
+
+router.get(
   '/usuario-equipamento-dashboard/:userId',
   authenticateToken,
   validateTenant,

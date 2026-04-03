@@ -1,17 +1,93 @@
 import { UsuarioEquipamentoDashboardRepository } from '../repositories/usuarioEquipamentoDashboardRepository';
 import { UsuarioEquipamentoDashboard } from '../types/UsuarioEquipamentoDashboard';
+import type {
+  DashboardChartBundleEntry,
+  DashboardChartBundleResponse,
+} from '../types/DashboardChartBundle';
 import { EquipamentoRepository } from '../repositories/equipamentoRepository';
 import { hasEquipamentoPermission } from '../utils/equipamentoPermissionHelper';
+import { ChartService } from './chartService';
 
 export class UsuarioEquipamentoDashboardService {
   private repository = new UsuarioEquipamentoDashboardRepository();
   private equipamentoRepository = new EquipamentoRepository();
+  private chartService = new ChartService();
 
   /**
    * Busca todos os equipamentos do dashboard do usuário
    */
   async getEquipamentosDashboard(userId: number): Promise<UsuarioEquipamentoDashboard[]> {
     return this.repository.findByUsuarioId(userId);
+  }
+
+  /**
+   * Lista do dashboard + dados de gráfico de cada card (paralelo por card).
+   * Usa o mesmo critério de métrica/tipo que o ChartCard (métrica salva ou primeira do equipamento).
+   */
+  async getDashboardBundle(userId: number): Promise<DashboardChartBundleResponse> {
+    const items = await this.repository.findByUsuarioId(userId);
+
+    const charts: DashboardChartBundleEntry[] = await Promise.all(
+      items.map(async (item) => {
+        const idMetrica = this.resolveMetricIdForChart(item);
+        if (idMetrica == null) {
+          return {
+            dashboardItemId: item.id,
+            chartData: null,
+            error: 'Nenhuma métrica disponível para este equipamento',
+          };
+        }
+
+        const tipo = item.id_tipo_grafico ?? 3;
+        try {
+          let chartData;
+          switch (tipo) {
+            case 1:
+              chartData = await this.chartService.getDoughnutChartData(
+                item.id_equipamento,
+                idMetrica
+              );
+              break;
+            case 2:
+              chartData = await this.chartService.getBarChartData(
+                item.id_equipamento,
+                idMetrica,
+                '1h'
+              );
+              break;
+            case 3:
+            default:
+              chartData = await this.chartService.getLineChartData(
+                item.id_equipamento,
+                idMetrica,
+                '5min'
+              );
+              break;
+          }
+          return { dashboardItemId: item.id, chartData, error: null };
+        } catch (e: any) {
+          return {
+            dashboardItemId: item.id,
+            chartData: null,
+            error: e?.message ?? 'Erro ao carregar gráfico',
+          };
+        }
+      })
+    );
+
+    return { items, charts };
+  }
+
+  private resolveMetricIdForChart(item: UsuarioEquipamentoDashboard): number | null {
+    if (item.id_metrica != null) {
+      return Number(item.id_metrica);
+    }
+    const em = (item.equipamento as { equipamento_metricas?: { id_metrica: number }[] } | undefined)
+      ?.equipamento_metricas;
+    if (Array.isArray(em) && em.length > 0 && em[0].id_metrica != null) {
+      return Number(em[0].id_metrica);
+    }
+    return null;
   }
 
   /**

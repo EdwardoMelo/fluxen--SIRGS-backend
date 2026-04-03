@@ -172,27 +172,22 @@ export class ChartService {
     id_metrica: number
   ): Promise<ChartData> {
     try {
-      // Buscar informações da métrica
-      const equipamentoMetrica = await this.equipamentoMetricaRepository.findByEquipamentoAndMetrica(
-        id_equipamento,
-        id_metrica
-      );
-
+      const [equipamentoMetrica, lastGroup] = await Promise.all([
+        this.equipamentoMetricaRepository.findByEquipamentoAndMetrica(
+          id_equipamento,
+          id_metrica
+        ),
+        this.equipamentoLogRepository.findLatestGroupByEquipamento(id_equipamento),
+      ]);
+      
       if (!equipamentoMetrica || !equipamentoMetrica.metrica) {
         throw new Error('Métrica não encontrada para este equipamento');
       }
 
-      // Buscar o último grupo de logs
-      const { groups } = await this.equipamentoLogRepository.findGroupedByTimestamp(
-        id_equipamento,
-        { page: 1, pageSize: 1 }
-      );
-
-      if (groups.length === 0) {
+      if (!lastGroup) {
         throw new Error('Nenhum log encontrado para este equipamento');
       }
 
-      const lastGroup = groups[0];
       const currentValue = this.extractMetricValueFromGroup(lastGroup, id_metrica);
 
       if (currentValue === null) {

@@ -21,6 +21,33 @@ export class UsuarioEquipamentoDashboardController {
   }
 
   /**
+   * GET /usuario-equipamento-dashboard/:userId/chart-bundle
+   * Lista do dashboard + dados de todos os gráficos (uma requisição).
+   */
+  async getDashboardChartBundle(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = Number(req.params.userId);
+      const authId = req.user?.id != null ? Number(req.user.id) : NaN;
+
+      if (isNaN(userId) || userId <= 0) {
+        res.status(400).json({ message: 'userId inválido' });
+        return;
+      }
+
+      if (isNaN(authId) || authId !== userId) {
+        res.status(403).json({ message: 'Acesso negado' });
+        return;
+      }
+
+      const bundle = await this.service.getDashboardBundle(userId);
+      res.json(bundle);
+    } catch (error) {
+      logError('Failed to get dashboard chart bundle', error, { userId: req.params.userId });
+      res.status(500).json({ message: 'Erro ao buscar bundle do dashboard' });
+    }
+  }
+
+  /**
    * POST /usuario-equipamento-dashboard
    * Adiciona um equipamento ao dashboard do usuário
    */

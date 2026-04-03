@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../database';
-import { logError, logInfo, logWarn } from '../utils/logger';
+import { logError, logWarn } from '../utils/logger';
 
 // Extend Request interface to include tenant
 declare global {
@@ -56,8 +56,6 @@ export const validateTenant = async (req: Request, res: Response, next: NextFunc
         ativo: true,
       }
     });
-
-    logInfo('Tenant found: ', { tenant });
 
     if (!tenant) {
       logWarn('Tenant validation failed: tenant not found', {

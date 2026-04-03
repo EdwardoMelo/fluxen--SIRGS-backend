@@ -78,6 +78,21 @@ export class EquipamentoLogRepository {
     return { groups, total };
   }
 
+  /**
+   * Apenas o grupo mais recente — sem count nem paginação.
+   * Evita o custo de COUNT(*) em equipamentos com muitos grupos (ex.: gráfico doughnut).
+   */
+  async findLatestGroupByEquipamento(
+    id_equipamento: number,
+    transaction?: Prisma.TransactionClient
+  ): Promise<EquipamentoLogGrupo | null> {
+    const executor = transaction ?? prisma;
+    return executor.equipamento_log_grupo.findFirst({
+      where: { id_equipamento },
+      orderBy: { timestamp: 'desc' },
+    });
+  }
+
   async findGroupedByTimestampWithTimeRange(
     id_equipamento: number,
     startDate: Date,

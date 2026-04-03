@@ -58,7 +58,7 @@ export class SystemAnnouncementRepository {
         },
         include: this.include(),
       })
-      .then((announcement) => this.format(announcement));
+      .then((announcement) => (announcement ? this.format(announcement) : null));
   };
 
   findActiveByTenant = async (
@@ -77,7 +77,7 @@ export class SystemAnnouncementRepository {
           created_at: 'desc',
         },
       })
-      .then((announcement) => this.format(announcement));
+      .then((announcement) => (announcement ? this.format(announcement) : null));
   };
 
   create = async (
@@ -112,7 +112,7 @@ export class SystemAnnouncementRepository {
         },
         include: this.include(),
       })
-      .then((announcement) => this.format(announcement));
+      .then((announcement) => this.format(announcement) as SystemAnnouncement);
   };
 
   update = async (
@@ -135,7 +135,7 @@ export class SystemAnnouncementRepository {
         },
         include: this.include(),
       })
-      .then(this.format);
+      .then((a) => this.format(a) as SystemAnnouncement);
   };
 
   delete = async (id: number, tenantId: number): Promise<void> => {
@@ -187,7 +187,10 @@ export class SystemAnnouncementRepository {
     return filters;
   };
 
-  format = (announcement: SystemAnnouncement | any): SystemAnnouncement => {
+  format = (announcement: SystemAnnouncement | any | null): SystemAnnouncement | null => {
+    if (announcement == null) {
+      return null;
+    }
     return {
       id: announcement.id,
       id_tenant: announcement.id_tenant,
@@ -203,5 +206,5 @@ export class SystemAnnouncementRepository {
   };
 
   formatArray = (announcements: any[]): SystemAnnouncement[] =>
-    announcements.map((announcement) => this.format(announcement));
+    announcements.map((announcement) => this.format(announcement) as SystemAnnouncement);
 }
