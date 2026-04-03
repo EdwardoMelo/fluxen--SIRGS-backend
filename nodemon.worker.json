@@ -1,0 +1,8 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["node_modules", "dist", "**/*.test.ts"],
+  "exec": "tsx src/wokers/logsWorker.ts",
+  "delay": 300,
+  "legacyWatch": true
+}
