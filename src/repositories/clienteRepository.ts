@@ -69,7 +69,6 @@ export class ClienteRepository {
     tenantId: number,
     tx?: Prisma.TransactionClient
   ): Promise<Cliente[] | void[]> => {
-    console.log("findByManagerUser clientes")
     const { generalFilter, columnFilters } = filters;
     const executor = tx || prisma;
     const clients = await executor.cliente.findMany({

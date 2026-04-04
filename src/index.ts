@@ -18,7 +18,7 @@ import supportRouter from './routers/supportRouter';
 import systemAnnouncementRouter from './routers/systemAnnouncementRouter';
 import cors from "cors";
 import morgan from "morgan";
-import { logger, logError, logInfo, logWarn } from './utils/logger';
+import { logError, logWarn } from './utils/logger';
 import { rabbitMQService } from './services/rabbitmqService';
 
 const app = express();
@@ -35,7 +35,7 @@ app.use(
   })
 );
 
-app.use(morgan('dev'));
+app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'tiny'));
 
 app.use(express.json());
 
@@ -44,13 +44,9 @@ app.get('/', (req, res) => {
 });
 
 // Test database connection
-prisma.$connect()
-  .then(() => {
-    logInfo('Database connection established');
-  })
-  .catch((error) => {
-    logError('Database connection failed', error);
-  });
+prisma.$connect().catch((error) => {
+  logError('Database connection failed', error);
+});
 
 // Apply routers
 app.use('/api', authRouter);
@@ -72,14 +68,8 @@ app.use('/api', systemAnnouncementRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  logInfo(`Server started on port ${PORT}`);
-});
+app.listen(PORT);
 
-rabbitMQService.connect()
-  .then(() => {
-    logInfo('RabbitMQ connection established');
-  })
-  .catch((error) => {
-    logWarn('RabbitMQ connection failed - will use direct processing', error);
-  });
+rabbitMQService.connect().catch((error) => {
+  logWarn('RabbitMQ connection failed - will use direct processing', error);
+});

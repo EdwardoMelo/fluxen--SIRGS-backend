@@ -5,7 +5,7 @@ import { PasswordResetTokenRepository } from '../repositories/passwordResetToken
 import { PasswordResetAuditRepository } from '../repositories/passwordResetAuditRepository';
 import { UsuarioRepository } from '../repositories/usuarioRepository';
 import { emailService } from './emailService';
-import { logError, logInfo } from '../utils/logger';
+import { logError } from '../utils/logger';
 
 export class PasswordResetService {
   private tokenRepository = new PasswordResetTokenRepository();
@@ -23,14 +23,12 @@ export class PasswordResetService {
    * Solicita redefinição de senha - envia email com link
    */
   async requestPasswordReset(email: string): Promise<void> {
-    console.log('requestPasswordReset', email);
     try {
       // Buscar usuário por email
       const usuario = await this.usuarioRepository.findByEmail(email);
 
       if (!usuario) {
         // Não revelar se o usuário existe ou não por segurança
-        logInfo('Password reset requested for non-existent email', { email });
         return;
       }
 
@@ -100,8 +98,6 @@ Se você não solicitou esta redefinição, ignore este email.
         text: emailText,
         html: emailHtml,
       });
-
-      logInfo('Password reset email sent', { userId: usuario.id, email });
     } catch (error) {
       logError('Failed to request password reset', error, { email });
       throw error;
@@ -162,8 +158,6 @@ Se você não solicitou esta redefinição, ignore este email.
           tx
         );
       });
-
-      logInfo('Password reset successfully', { userId: resetToken.id_usuario });
     } catch (error) {
       logError('Failed to reset password', error, { token });
       throw error;

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { EquipamentoLogService } from '../services/equipamentoLogService';
 import { CreateEquipamentoLogsDTO } from '../dto/HttpRequestDTOS/CreateEquipamentoLogsDTO';
-import { logError, logWarn, logInfo } from '../utils/logger';
+import { logError, logWarn } from '../utils/logger';
 
 export class EquipamentoLogController {
   private equipamentoLogService = new EquipamentoLogService();
@@ -32,11 +32,6 @@ export class EquipamentoLogController {
         const sentToQueue = await this.equipamentoLogService.sendLogsToRabbitMQ(data);
         
         if (sentToQueue) {
-          // Logs enviados para fila com sucesso - processamento assíncrono
-          logInfo('Equipment logs queued for async processing', {
-            equipamentoId,
-            logsCount: data.logs?.length || 0
-          });
           res.status(202).json({ 
             message: 'Logs recebidos e em processamento',
             accepted: true,
@@ -53,17 +48,9 @@ export class EquipamentoLogController {
       }
 
       // Fallback: processamento síncrono (fila cheia ou RabbitMQ indisponível)
-      logInfo('Processing logs synchronously (RabbitMQ unavailable or queue full)', {
-        equipamentoId
-      });
       // Obter tenantId do equipamento autenticado
       const tenantId = req.equipamento?.id_tenant;
       const group = await this.equipamentoLogService.createManyEquipamentoLogs(data, tenantId);
-      logInfo('Equipment logs processed successfully (sync)', {
-        equipamentoId,
-        groupId: group.id,
-        logsCount: data.logs?.length || 0
-      });
       res.status(201).json({
         ...group,
         processingMode: 'sync'

@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../database';
-import { logError, logWarn } from '../utils/logger';
-
 // Extend Request interface to include tenant
 declare global {
   namespace Express {
@@ -35,12 +33,6 @@ export const validateTenant = async (req: Request, res: Response, next: NextFunc
         : null;
 
     if (!tenantId || isNaN(tenantId)) {
-      logWarn('Tenant validation failed: missing tenantId', {
-        path: req.path,
-        method: req.method,
-        hasHeader: !!tenantIdFromHeader,
-        hasJWT: !!tenantIdFromJWT
-      });
       return res.status(400).json({ 
         message: 'Tenant ID é obrigatório. Header X-Tenant-Id não fornecido ou inválido.' 
       });
@@ -58,22 +50,12 @@ export const validateTenant = async (req: Request, res: Response, next: NextFunc
     });
 
     if (!tenant) {
-      logWarn('Tenant validation failed: tenant not found', {
-        tenantId,
-        path: req.path,
-        method: req.method
-      });
       return res.status(404).json({ 
         message: 'Tenant não encontrado.' 
       });
     }
 
     if (!tenant.ativo) {
-      logWarn('Tenant validation failed: tenant is inactive', {
-        tenantId,
-        path: req.path,
-        method: req.method
-      });
       return res.status(403).json({ 
         message: 'Tenant está inativo. Entre em contato com o suporte.' 
       });
@@ -87,23 +69,12 @@ export const validateTenant = async (req: Request, res: Response, next: NextFunc
       });
 
       if (!user) {
-        logWarn('Tenant validation failed: user not found', {
-          userId: req.user.id,
-          tenantId,
-          path: req.path
-        });
         return res.status(404).json({ 
           message: 'Usuário não encontrado.' 
         });
       }
 
       if (user.id_tenant !== tenantId) {
-        logWarn('Tenant validation failed: user does not belong to tenant', {
-          userId: req.user.id,
-          userTenantId: user.id_tenant,
-          requestedTenantId: tenantId,
-          path: req.path
-        });
         return res.status(403).json({ 
           message: 'Você não tem permissão para acessar este tenant.' 
         });
@@ -115,11 +86,7 @@ export const validateTenant = async (req: Request, res: Response, next: NextFunc
     req.tenantId = tenant.id;
 
     next();
-  } catch (error) {
-    logError('Error validating tenant', error, {
-      path: req.path,
-      method: req.method
-    });
+  } catch {
     return res.status(500).json({ 
       message: 'Erro ao validar tenant.' 
     });

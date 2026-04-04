@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { logError, logInfo } from '../utils/logger';
+import { logError } from '../utils/logger';
 
 interface EmailConfig {
   host: string;
@@ -56,11 +56,6 @@ class EmailService {
 
       // Verificar conexão
       await this.transporter.verify();
-      logInfo('Email service initialized successfully', {
-        host: config.host,
-        port: config.port,
-        from: this.fromEmail,
-      });
     } catch (error) {
       logError('Failed to initialize email service', error);
       throw error;
@@ -89,12 +84,7 @@ class EmailService {
         attachments: options.attachments,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      logInfo('Email sent successfully', {
-        to: options.to,
-        subject: options.subject,
-        messageId: info.messageId,
-      });
+      await this.transporter.sendMail(mailOptions);
     } catch (error) {
       logError('Failed to send email', error, {
         to: options.to,

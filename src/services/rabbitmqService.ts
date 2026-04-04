@@ -1,5 +1,5 @@
 import { connect, Connection, Channel } from 'amqplib-as-promised';
-import { logError, logInfo } from '../utils/logger';
+import { logError } from '../utils/logger';
 
 class RabbitMQService {
     private connection: Connection | null = null;
@@ -29,7 +29,6 @@ class RabbitMQService {
             if (!this.connection) {
                 throw new Error('Failed to connect to RabbitMQ');
             }
-            logInfo('RabbitMQ connection established');
             this.channel = await this.connection.createChannel();
             // Criar exchange
             await this.channel.assertExchange(this.exchangeName, 'direct', {
@@ -91,7 +90,6 @@ class RabbitMQService {
             await this.channel.bindQueue(this.reportRetryQueueName, this.reportExchangeName, this.reportRetryQueueName);
             await this.channel.bindQueue(this.reportDeadLetterQueueName, this.reportExchangeName, this.reportDeadLetterQueueName);
 
-            logInfo('RabbitMQ queues and exchanges created');
         } catch (error) {
             logError('Failed to connect to RabbitMQ', error);
             throw error;
@@ -136,7 +134,6 @@ class RabbitMQService {
                 await operation(data);
                 // Acknowledge após processamento bem-sucedido
                 this.channel?.ack(message);
-                logInfo('Logs processed successfully from queue');
             } catch (error) {
                 logError('Failed to process logs from queue', error);
                 // Verificar número de tentativas
@@ -166,8 +163,6 @@ class RabbitMQService {
         }, {
             noAck: false
         });
-
-        logInfo('Started consuming logs from RabbitMQ queue');
     }
 
     async close(): Promise<void> {
@@ -178,7 +173,6 @@ class RabbitMQService {
             if (this.connection) {
                 await this.connection.close();
             }
-            logInfo('RabbitMQ connection closed');
         } catch (error) {
             logError('Error closing RabbitMQ connection', error);
         }
@@ -228,7 +222,6 @@ class RabbitMQService {
                 await operation(data);
                 // Acknowledge após processamento bem-sucedido
                 this.channel?.ack(message);
-                logInfo('Report request processed successfully from queue');
             } catch (error) {
                 logError('Failed to process report request from queue', error);
                 // Verificar número de tentativas
@@ -258,8 +251,6 @@ class RabbitMQService {
         }, {
             noAck: false
         });
-
-        logInfo('Started consuming report requests from RabbitMQ queue');
     }
 
     isConnected(): boolean {

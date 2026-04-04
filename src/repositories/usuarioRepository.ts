@@ -29,7 +29,6 @@ export class UsuarioRepository {
   };
 
   async findAll(filters?: UserFilters, tenantId?: number, tx?: Prisma.TransactionClient): Promise<Usuario[]> {
-    console.log("findAll usuarios")
     if (tx) {
       const where: Prisma.usuarioWhereInput = {
         AND: [

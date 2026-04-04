@@ -4,7 +4,7 @@ import { EquipamentoLogRepository } from '../repositories/equipamentoLogReposito
 import { EquipamentoMetricaRepository } from '../repositories/equipamentoMetricaRepository';
 import { Cliente } from '../types/Cliente';
 import { PrismaClient } from '@prisma/client';
-import { logInfo, logError } from '../utils/logger';
+import { logError } from '../utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -122,7 +122,6 @@ export class NotificacaoService {
 
       if (notificacoesParaCriar.length > 0) {
         await this.notificacaoRepository.createMany(notificacoesParaCriar, tenantId);
-        logInfo(`[Notifications] Created ${notificacoesParaCriar.length} notification(s) for ${tipoAlerta.toUpperCase()} alarm - Equipment: ${equipamento.nome}, Metric: ${metrica?.nome}, Value: ${valorConvertido.toFixed(2)}`);
       }
     } catch (error) {
       logError(`[Notifications] Failed to create notifications for log`, error);
@@ -131,8 +130,6 @@ export class NotificacaoService {
   }
 
   async processNotificationsForUser(userId: number): Promise<void> {
-    logInfo(`[Scan] Starting notification scan for user ${userId}`);
-
     // Obter tenantId do usuário
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
@@ -140,7 +137,6 @@ export class NotificacaoService {
     });
 
     if (!usuario || !usuario.id_tenant) {
-      logInfo(`[Scan] User ${userId} has no tenant - skipping`);
       return;
     }
 
@@ -193,11 +189,8 @@ export class NotificacaoService {
     });
 
     if (clientesIds.length === 0) {
-      logInfo(`[Scan] User ${userId} has no associated clients - skipping`);
       return;
     }
-
-    logInfo(`[Scan] Found ${clientesIds.length} client(s) for user ${userId}`);
 
     // Buscar todos os equipamentos desses clientes do mesmo tenant
     const equipamentos = await prisma.equipamento.findMany({
@@ -210,12 +203,10 @@ export class NotificacaoService {
     });
 
     if (equipamentos.length === 0) {
-      logInfo(`[Scan] No equipment found for user ${userId} clients - skipping`);
       return;
     }
 
     const equipamentosIds = equipamentos.map(e => e.id);
-    logInfo(`[Scan] Found ${equipamentos.length} equipment(s) to scan`);
 
     // Buscar logs grupos recentes (últimas 24 horas) desses equipamentos
     const umDiaAtras = new Date();
@@ -238,10 +229,6 @@ export class NotificacaoService {
 
     // Processar cada log grupo e verificar alarmes
     const notificacoesParaCriar: Array<{ id_usuario: number; descricao: string }> = [];
-    let totalLogsProcessed = 0;
-    let totalAlarmsDetected = 0;
-
-    logInfo(`[Scan] Processing ${logsGrupos.length} log group(s) from last 24h`);
 
     for (const logGrupo of logsGrupos) {
       if (!logGrupo.id_equipamento) continue;
@@ -266,7 +253,6 @@ export class NotificacaoService {
 
       // Verificar cada log por alarmes
       for (const log of parsedLogs) {
-        totalLogsProcessed++;
         const valorConvertido = log.valor_convertido !== null && log.valor_convertido !== undefined
           ? Number(log.valor_convertido)
           : null;
@@ -293,7 +279,6 @@ export class NotificacaoService {
         }
 
         if (tipoAlerta) {
-          totalAlarmsDetected++;
           const metrica = equipamentoMetrica.metrica;
           const descricao = `Alerta ${tipoAlerta === 'min' ? 'MÍNIMO' : 'MÁXIMO'}: Equipamento "${equipamento.nome}" - Métrica "${metrica?.nome || 'Desconhecida'}" com valor ${valorConvertido.toFixed(2)} ${metrica?.unidade || ''} (${new Date(logGrupo.timestamp || new Date()).toLocaleString('pt-BR')})`;
 
@@ -355,13 +340,8 @@ export class NotificacaoService {
 
     // Criar notificações em lote
     if (notificacoesParaCriar.length > 0) {
-      const created = await this.notificacaoRepository.createMany(notificacoesParaCriar, tenantId);
-      logInfo(`[Scan] Created ${created} notification(s) from ${totalAlarmsDetected} alarm(s) detected`);
-    } else {
-      logInfo(`[Scan] No alarms detected - no notifications created`);
+      await this.notificacaoRepository.createMany(notificacoesParaCriar, tenantId);
     }
-
-    logInfo(`[Scan] Completed for user ${userId} - Processed: ${totalLogsProcessed} logs, Detected: ${totalAlarmsDetected} alarms, Created: ${notificacoesParaCriar.length} notifications`);
   }
 
   async getNotificationsByUser(userId: number, viewed?: boolean): Promise<Notificacao[]> {

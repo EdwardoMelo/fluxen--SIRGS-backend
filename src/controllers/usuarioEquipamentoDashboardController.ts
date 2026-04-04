@@ -151,7 +151,6 @@ export class UsuarioEquipamentoDashboardController {
    * Atualiza o tipo de gráfico de uma associação existente
    */
   async updateTipoGrafico(req: Request, res: Response): Promise<void> {
-    console.log("updateTipoGrafico");
     try {
       const { id } = req.params;
       const { id_tipo_grafico } = req.body;

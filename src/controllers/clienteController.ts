@@ -95,9 +95,7 @@ export class ClienteController {
     try {
       const userId = req.user?.id ? Number(req.user.id) : undefined;
       const tenantId = req.tenantId;
-      console.log('getClientesByManager - userId:', userId);
-      console.log('getClientesByManager - req.user:', req.user);
-      
+
       if (!userId) {
         res.status(400).json({ message: 'User ID is required' });
         return;
@@ -117,9 +115,7 @@ export class ClienteController {
         generalFilter: "",
       };
 
-      console.log('getClientesByManager - filters:', filters);
       const clientes = await this.clienteService.getClientesByManager(userId, tenantId, filters);
-      console.log('getClientesByManager - clientes retornados:', clientes);
       res.json(clientes);
     } catch (error) {
       logError('Failed to get clients by manager', error, { userId: req.user?.id });

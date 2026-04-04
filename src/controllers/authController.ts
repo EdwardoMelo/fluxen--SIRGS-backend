@@ -3,13 +3,12 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../database';
 import { UsuarioRepository } from '../repositories/usuarioRepository';
-import { logError, logWarn, logInfo } from '../utils/logger';
+import { logError, logWarn } from '../utils/logger';
 
 const secret = process.env.JWT_SECRET || 'default_secret';
 
 export class AuthController {
   async register(req: Request, res: Response) {
-    console.log('register', req.body);
     const { username, senha, nome, email } = req.body;
 
     if (!username || !senha || !nome || !email) {
@@ -44,7 +43,6 @@ export class AuthController {
         data: { username, senha: hashedPassword, nome, email },
       });
 
-      logInfo('User registered successfully', { userId: user.id, email });
       res.status(201).json(user);
     } catch (error) {
       logError('Failed to register user', error, { email, username });
@@ -53,7 +51,6 @@ export class AuthController {
   }
 
   async login(req: Request, res: Response) {
-    console.log('login', req.body);
     const { email, password } = req.body;
     const userRepository = new UsuarioRepository();
 
@@ -75,7 +72,6 @@ export class AuthController {
         }, secret, {
           expiresIn: "2d",
         });
-        logInfo('User logged in successfully', { userId: user.id, email, tenantId: user.id_tenant });
         return res.json({ token, user });
       }
 

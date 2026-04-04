@@ -1,6 +1,7 @@
 import winston from 'winston';
 
-const logLevel = process.env.LOG_LEVEL || 'info';
+/** Padrão `warn`: só avisos + erros (sem `logInfo`). Use `LOG_LEVEL=info` em desenvolvimento se precisar de tráfego detalhado. */
+const logLevel = process.env.LOG_LEVEL || 'warn';
 
 export const logger = winston.createLogger({
   level: logLevel,

@@ -10,7 +10,6 @@ export class PasswordResetController {
    * Solicita redefinição de senha
    */
   async requestPasswordReset(req: Request, res: Response) {
-    console.log('requestPasswordReset', req.body);
     try {
       const { email } = req.body;
 
@@ -35,7 +34,6 @@ export class PasswordResetController {
    * Redefine a senha usando o token
    */
   async resetPassword(req: Request, res: Response) {
-    console.log('resetPassword', req.body);
     try {
       const { token, newPassword } = req.body;
 

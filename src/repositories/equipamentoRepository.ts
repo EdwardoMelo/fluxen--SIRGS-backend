@@ -11,7 +11,6 @@ export class EquipamentoRepository {
     tenantId: number,
     tx?: Prisma.TransactionClient
   ): Promise<Equipamento[] | void[]> => {
-    console.log("findByResponsableUser equipamentos")
     const executor = tx || prisma;
     const { generalFilter, columnFilters } = filters;
     const clients = await executor.cliente.findMany({
@@ -58,7 +57,6 @@ export class EquipamentoRepository {
     tenantId: number,
     tx?: Prisma.TransactionClient
   ): Promise<Equipamento[] | void[]> => {
-    console.log("findByManagerUser equipamentos")
     const executor = tx || prisma;
     const { generalFilter, columnFilters } = filters;
     const clients = await executor.cliente.findMany({
@@ -105,7 +103,6 @@ export class EquipamentoRepository {
     tx?: Prisma.TransactionClient
   ): Promise<Equipamento[] | void[]> => {
 
-    console.log("findAll equipamentos")
     const executor = tx || prisma;
     const { generalFilter, columnFilters } = filters;
     const where: Prisma.equipamentoWhereInput = {

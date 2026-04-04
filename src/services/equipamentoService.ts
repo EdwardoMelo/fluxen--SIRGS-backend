@@ -13,9 +13,6 @@ export class EquipamentoService {
     const isAdmin = await this.usuarioRepository.isAdmin(userId);
     const isResponsable = await this.usuarioRepository.isResponsable(userId);
     const isManager = await this.usuarioRepository.isManager(userId);
-    console.log("isAdmin", isAdmin);
-    console.log("isResponsable", isResponsable);
-    console.log("isManager", isManager);
     if(isAdmin) {
       return await this.equipamentoRepository.findAll(filters, tenantId);
     }

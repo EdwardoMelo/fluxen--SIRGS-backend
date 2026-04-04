@@ -4,7 +4,7 @@ import { EquipamentoMetrica } from "../types/EquipamentoMetrica";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { CreateEquipamentoLogsDTO } from "../dto/HttpRequestDTOS/CreateEquipamentoLogsDTO";
 import { rabbitMQService } from "./rabbitmqService";
-import { logError, logInfo } from "../utils/logger";
+import { logError } from "../utils/logger";
 import { NotificacaoService } from "./notificacaoService";
 import { toBrazilianTimezone } from "../utils/dateUtils";
 
@@ -75,7 +75,6 @@ export class EquipamentoLogService {
     try {
       // Verificar se RabbitMQ está conectado
       if (!rabbitMQService.isConnected()) {
-        logError('RabbitMQ not connected, attempting to connect...', new Error('RabbitMQ not connected'));
         await rabbitMQService.connect();
       }
 
@@ -83,15 +82,9 @@ export class EquipamentoLogService {
       const published = await rabbitMQService.publishLogs(data);
 
       if (published) {
-        logInfo('Logs sent to RabbitMQ successfully', {
-          equipamentoId: data.logs?.[0]?.id_equipamento,
-          logsCount: data.logs?.length || 0
-        });
         return true;
-      } else {
-        logError('Failed to publish logs to RabbitMQ - queue buffer full', new Error('Queue buffer full'));
-        return false;
       }
+      return false;
     } catch (error) {
       logError('Failed to send logs to RabbitMQ', error, {
         equipamentoId: data.logs?.[0]?.id_equipamento
@@ -174,7 +167,6 @@ export class EquipamentoLogService {
       }
       newGroup.logs = JSON.stringify(data.logs);
      const updatedGroup = await this.equipamentoLogRepository.updateGroup(newGroup.id, newGroup, tx);
-     console.log({updatedGroup});
 
       // Retornar o grupo criado com os logs
       return updatedGroup;
@@ -317,12 +309,6 @@ export class EquipamentoLogService {
       );
       const situationRows = this.buildRowsFromGroups(recentGroups, metrics);
 
-      logInfo('Logs table incremental', {
-        rowsLength: rows.length,
-        afterGroupId,
-        id_equipamento
-      });
-
       return {
         columns: columnsArray,
         rows,
@@ -379,10 +365,6 @@ export class EquipamentoLogService {
       }
     }
 
-    logInfo('Logs table data', {
-      rowsLength: rows.length,
-      hasDateFilter: !!(startDate && endDate),
-    })
     const page = Math.max(paginationOptions.page ?? 1, 1);
     const pageSize = Math.max(Math.min(paginationOptions.pageSize ?? 50, 500), 1);
 

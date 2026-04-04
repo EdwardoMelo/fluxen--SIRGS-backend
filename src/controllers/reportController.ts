@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { rabbitMQService } from '../services/rabbitmqService';
-import { logError, logInfo, logWarn } from '../utils/logger';
+import { logError, logWarn } from '../utils/logger';
 import { hasEquipamentoPermission } from '../utils/equipamentoPermissionHelper';
 import { prisma } from '../database';
 
@@ -82,14 +82,6 @@ export class ReportController {
 
       // Enviar requisição para a fila
       try {
-        logInfo('Sending report request to queue', {
-          id_equipamento,
-          userId,
-          startDate: start.toISOString(),
-          endDate: end.toISOString(),
-          format,
-          email: recipientEmail,
-        });
         const sentToQueue = await rabbitMQService.publishReportRequest({
           id_equipamento: Number(id_equipamento),
           userId,
@@ -100,12 +92,6 @@ export class ReportController {
         });
 
         if (sentToQueue) {
-          logInfo('Report request sent to queue', {
-            id_equipamento,
-            userId,
-            format,
-            email: recipientEmail,
-          });
           res.json({
             message: 'Relatório em processamento. Você receberá por email quando estiver pronto.',
             estimatedTime: Math.ceil(daysDiff * 0.5), // Estimativa em minutos

@@ -28,7 +28,6 @@ export class UsuarioPerfilClienteController {
         return;
       }
 
-      console.log(req.body.relacionamentos);
       const relacionamentos = await this.service.updateRelacionamentos({
         id_usuario: Number(id_usuario),
         relacionamentos: req.body.relacionamentos || [],

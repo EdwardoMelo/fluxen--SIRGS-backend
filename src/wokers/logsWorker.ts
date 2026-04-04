@@ -2,7 +2,7 @@ import { rabbitMQService } from '../services/rabbitmqService';
 import { EquipamentoLogService } from '../services/equipamentoLogService';
 import { ReportService } from '../services/reportService';
 import { emailService } from '../services/emailService';
-import { logError, logInfo } from '../utils/logger';
+import { logError } from '../utils/logger';
 import { prisma } from '../database';
 
 const equipamentoLogService = new EquipamentoLogService();
@@ -11,11 +11,7 @@ const reportService = new ReportService();
 async function processLogs(data: any): Promise<void> {
     try {
         const equipamentoId = data.logs?.[0]?.id_equipamento;
-        logInfo('Processing logs from queue', {
-            equipamentoId,
-            logsCount: data.logs?.length || 0
-        });
-        
+
         // Obter tenantId do equipamento
         let tenantId: number | undefined;
         if (equipamentoId) {
@@ -29,9 +25,6 @@ async function processLogs(data: any): Promise<void> {
         }
         
         await equipamentoLogService.createManyEquipamentoLogs(data, tenantId);
-        logInfo('Logs processed successfully', {
-            equipamentoId
-        });
     } catch (error) {
         logError('Failed to process logs from queue', error);
         throw error; // Isso fará o retry automático
@@ -41,15 +34,6 @@ async function processLogs(data: any): Promise<void> {
 async function processReportRequest(data: any): Promise<void> {
     try {
         const { id_equipamento, userId, startDate, endDate, format, email } = data;
-        
-        logInfo('Processing report request from queue', {
-            id_equipamento,
-            userId,
-            format,
-            email,
-            startDate,
-            endDate
-        });
 
         // Validar email
         if (!email) {
@@ -89,13 +73,6 @@ async function processReportRequest(data: any): Promise<void> {
             format,
             fileBuffer
         );
-
-        logInfo('Report processed and sent successfully', {
-            id_equipamento,
-            email,
-            format,
-            fileSize: fileBuffer.length
-        });
     } catch (error) {
         logError('Failed to process report request from queue', error);
         throw error; // Isso fará o retry automático
@@ -107,7 +84,6 @@ async function startWorker() {
         // Inicializar email service
         if (emailService.isConfigured()) {
             await emailService.initialize();
-            logInfo('Email service initialized successfully');
         } else {
             logError('Email service not configured. Reports will not be sent.', new Error('Email configuration missing'));
         }
@@ -120,8 +96,6 @@ async function startWorker() {
         
         // Iniciar consumo de requisições de relatórios
         await rabbitMQService.consumeReportRequests(processReportRequest);
-        
-        logInfo('Logs worker started successfully (logs + reports)');
     } catch (error) {
         logError('Failed to start logs worker', error);
         process.exit(1);
@@ -130,14 +104,12 @@ async function startWorker() {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-    logInfo('Shutting down logs worker...');
     await rabbitMQService.close();
     await prisma.$disconnect();
     process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-    logInfo('Shutting down logs worker...');
     await rabbitMQService.close();
     await prisma.$disconnect();
     process.exit(0);

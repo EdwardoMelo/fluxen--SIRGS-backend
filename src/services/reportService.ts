@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import { EquipamentoLogService } from './equipamentoLogService';
 import { prisma } from '../database';
-import { logError, logInfo } from '../utils/logger';
+import { logError } from '../utils/logger';
 import type { EquipamentoMetrica } from '../types/EquipamentoMetrica';
 
 export class ReportService {
@@ -17,12 +17,6 @@ export class ReportService {
     endDate: Date
   ): Promise<Buffer> {
     try {
-      logInfo('Generating XLSX report', {
-        id_equipamento,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-      });
-
       // Buscar equipamento
       const equipamento = await prisma.equipamento.findUnique({
         where: { id: id_equipamento },
@@ -133,12 +127,6 @@ export class ReportService {
   ): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
       try {
-        logInfo('Generating PDF report', {
-          id_equipamento,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        });
-
         // Buscar equipamento
         const equipamento = await prisma.equipamento.findUnique({
           where: { id: id_equipamento },
