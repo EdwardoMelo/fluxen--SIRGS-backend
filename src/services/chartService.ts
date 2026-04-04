@@ -179,7 +179,7 @@ export class ChartService {
         ),
         this.equipamentoLogRepository.findLatestGroupByEquipamento(id_equipamento),
       ]);
-      
+
       if (!equipamentoMetrica || !equipamentoMetrica.metrica) {
         throw new Error('Métrica não encontrada para este equipamento');
       }
