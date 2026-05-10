@@ -57,6 +57,13 @@ router.put(
   controller.updateTipoGrafico.bind(controller)
 );
 
+router.patch(
+  '/usuario-equipamento-dashboard/item/:id/time-range',
+  authenticateToken,
+  validateTenant,
+  controller.updateTimeRange.bind(controller)
+);
+
 export default router;
 
 

@@ -1,3 +1,4 @@
+import './loadEnv';
 import express from 'express';
 import { prisma } from './database';
 import authRouter from './routers/authRouter';
@@ -16,6 +17,7 @@ import notificacaoRouter from './routers/notificacaoRouter';
 import reportRouter from './routers/reportRouter';
 import supportRouter from './routers/supportRouter';
 import systemAnnouncementRouter from './routers/systemAnnouncementRouter';
+import landingContactRouter from './routers/landingContactRouter';
 import cors from "cors";
 import morgan from "morgan";
 import { logError, logWarn } from './utils/logger';
@@ -65,6 +67,7 @@ app.use('/api', notificacaoRouter);
 app.use('/api', reportRouter);
 app.use('/api', supportRouter);
 app.use('/api', systemAnnouncementRouter);
+app.use('/api', landingContactRouter);
 
 // Start the server
 const PORT = process.env.PORT || 3000;

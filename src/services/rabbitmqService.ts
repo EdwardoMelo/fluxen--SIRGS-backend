@@ -1,5 +1,5 @@
 import { connect, Connection, Channel } from 'amqplib-as-promised';
-import { logError } from '../utils/logger';
+import { logError, logInfo } from '../utils/logger';
 
 class RabbitMQService {
     private connection: Connection | null = null;
@@ -21,6 +21,10 @@ class RabbitMQService {
     private readonly reportExchangeName = 'report_requests_exchange';
     private readonly reportRetryQueueName = 'report_requests_retry';
     private readonly reportDeadLetterQueueName = 'report_requests_dlq';
+    private readonly dashboardBundleQueueName = 'dashboard_bundle_refresh';
+    private readonly dashboardBundleExchangeName = 'dashboard_bundle_refresh_exchange';
+    private readonly dashboardBundleRetryQueueName = 'dashboard_bundle_refresh_retry';
+    private readonly dashboardBundleDeadLetterQueueName = 'dashboard_bundle_refresh_dlq';
 
     async connect(): Promise<void> {
         try {
@@ -90,6 +94,33 @@ class RabbitMQService {
             await this.channel.bindQueue(this.reportRetryQueueName, this.reportExchangeName, this.reportRetryQueueName);
             await this.channel.bindQueue(this.reportDeadLetterQueueName, this.reportExchangeName, this.reportDeadLetterQueueName);
 
+            // Criar exchange para refresh de bundles do dashboard
+            await this.channel.assertExchange(this.dashboardBundleExchangeName, 'direct', {
+                durable: true
+            });
+            await this.channel.assertQueue(this.dashboardBundleQueueName, {
+                durable: true,
+                arguments: {
+                    'x-dead-letter-exchange': this.dashboardBundleExchangeName,
+                    'x-dead-letter-routing-key': this.dashboardBundleDeadLetterQueueName,
+                    'x-message-ttl': 1800000 // 30 minutos
+                }
+            });
+            await this.channel.assertQueue(this.dashboardBundleRetryQueueName, {
+                durable: true,
+                arguments: {
+                    'x-dead-letter-exchange': this.dashboardBundleExchangeName,
+                    'x-dead-letter-routing-key': this.dashboardBundleQueueName,
+                    'x-message-ttl': 30000 // 30 segundos
+                }
+            });
+            await this.channel.assertQueue(this.dashboardBundleDeadLetterQueueName, {
+                durable: true
+            });
+            await this.channel.bindQueue(this.dashboardBundleQueueName, this.dashboardBundleExchangeName, this.dashboardBundleQueueName);
+            await this.channel.bindQueue(this.dashboardBundleRetryQueueName, this.dashboardBundleExchangeName, this.dashboardBundleRetryQueueName);
+            await this.channel.bindQueue(this.dashboardBundleDeadLetterQueueName, this.dashboardBundleExchangeName, this.dashboardBundleDeadLetterQueueName);
+
         } catch (error) {
             logError('Failed to connect to RabbitMQ', error);
             throw error;
@@ -130,6 +161,9 @@ class RabbitMQService {
             if (!message) return;
 
             try {
+                logInfo('RabbitMQ raw message received on equipamento_logs', {
+                    bytes: message.content?.length ?? 0
+                });
                 const data = JSON.parse(message.content.toString());
                 await operation(data);
                 // Acknowledge após processamento bem-sucedido
@@ -245,6 +279,71 @@ class RabbitMQService {
                 } else {
                     // Mover para dead letter queue após 3 tentativas
                     logError('Report request moved to DLQ after max retries', { retryCount });
+                    this.channel?.nack(message, false, false);
+                }
+            }
+        }, {
+            noAck: false
+        });
+    }
+
+    async publishDashboardBundleRefresh(data: any): Promise<boolean> {
+        if (!this.channel) {
+            throw new Error('RabbitMQ channel not initialized');
+        }
+
+        try {
+            const message = Buffer.from(JSON.stringify(data));
+            const published = this.channel.publish(
+                this.dashboardBundleExchangeName,
+                this.dashboardBundleQueueName,
+                message,
+                {
+                    persistent: true,
+                    timestamp: Date.now()
+                }
+            );
+            return published !== null && published !== undefined ? true : false;
+        } catch (error) {
+            logError('Failed to publish dashboard bundle refresh request', error);
+            throw error;
+        }
+    }
+
+    async consumeDashboardBundleRefresh(operation: (data: any) => Promise<void>): Promise<void> {
+        if (!this.channel) {
+            throw new Error('RabbitMQ channel not initialized');
+        }
+
+        await this.channel.prefetch(10);
+
+        await this.channel.consume(this.dashboardBundleQueueName, async (message) => {
+            if (!message) return;
+
+            try {
+                const data = JSON.parse(message.content.toString());
+                await operation(data);
+                this.channel?.ack(message);
+            } catch (error) {
+                logError('Failed to process dashboard bundle refresh from queue', error);
+                const retryCount = message.properties.headers?.['x-retry-count'] || 0;
+                if (retryCount < 5) {
+                    if (this.channel) {
+                        this.channel.publish(
+                            this.dashboardBundleExchangeName,
+                            this.dashboardBundleRetryQueueName,
+                            message.content,
+                            {
+                                persistent: true,
+                                headers: {
+                                    'x-retry-count': retryCount + 1
+                                }
+                            }
+                        );
+                    }
+                    this.channel?.ack(message);
+                } else {
+                    logError('Dashboard bundle refresh moved to DLQ after max retries', { retryCount });
                     this.channel?.nack(message, false, false);
                 }
             }

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { UsuarioEquipamentoDashboardService } from '../services/usuarioEquipamentoDashboardService';
+import type { TimeRange } from '../services/chartService';
 import { logError } from '../utils/logger';
+
+const VALID_TIME_RANGES: ReadonlyArray<TimeRange> = ['5min', '15min', '30min', '1h', '6h', '24h', '7d'];
 
 export class UsuarioEquipamentoDashboardController {
   private service = new UsuarioEquipamentoDashboardService();
@@ -90,8 +93,8 @@ export class UsuarioEquipamentoDashboardController {
     try {
       const { id } = req.params;
 
-      await this.service.removeEquipamentoFromDashboardById(Number(id));
-      res.status(204).send();
+      const bundle = await this.service.removeEquipamentoFromDashboardById(Number(id));
+      res.status(200).json({ bundle });
     } catch (error: any) {
       logError('Failed to remove equipment from dashboard by id', error, {
         id: req.params.id
@@ -109,12 +112,12 @@ export class UsuarioEquipamentoDashboardController {
       const { userId, equipamentoId } = req.params;
       const { id_metrica } = req.query;
 
-      await this.service.removeEquipamentoFromDashboard(
+      const bundle = await this.service.removeEquipamentoFromDashboard(
         Number(userId),
         Number(equipamentoId),
         id_metrica ? Number(id_metrica) : null
       );
-      res.status(204).send();
+      res.status(200).json({ bundle });
     } catch (error: any) {
       logError('Failed to remove equipment from dashboard', error, {
         userId: req.params.userId,
@@ -153,16 +156,21 @@ export class UsuarioEquipamentoDashboardController {
   async updateTipoGrafico(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { id_tipo_grafico } = req.body;
+      const { id_tipo_grafico, timeRange } = req.body;
 
       if (id_tipo_grafico === undefined) {
         res.status(400).json({ message: 'id_tipo_grafico é obrigatório' });
         return;
       }
+      if (timeRange !== undefined && (typeof timeRange !== 'string' || !VALID_TIME_RANGES.includes(timeRange as TimeRange))) {
+        res.status(400).json({ message: 'timeRange inválido' });
+        return;
+      }
 
       const result = await this.service.updateTipoGrafico(
         Number(id),
-        id_tipo_grafico ? Number(id_tipo_grafico) : null
+        id_tipo_grafico ? Number(id_tipo_grafico) : null,
+        typeof timeRange === 'string' ? (timeRange as TimeRange) : undefined
       );
       res.json(result);
     } catch (error: any) {
@@ -171,6 +179,34 @@ export class UsuarioEquipamentoDashboardController {
       });
       const statusCode = error.message.includes('não encontrado') ? 404 : 500;
       res.status(statusCode).json({ message: error.message || 'Erro ao atualizar tipo de gráfico' });
+    }
+  }
+
+  /**
+   * PATCH /usuario-equipamento-dashboard/item/:id/time-range
+   * Atualiza o intervalo de um gráfico específico no bundle persistido.
+   */
+  async updateTimeRange(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { timeRange } = req.body;
+
+      if (typeof timeRange !== 'string' || !VALID_TIME_RANGES.includes(timeRange as TimeRange)) {
+        res.status(400).json({ message: 'timeRange inválido' });
+        return;
+      }
+
+      const bundle = await this.service.updateTimeRangeInBundleByItemId(
+        Number(id),
+        timeRange as TimeRange
+      );
+      res.json({ bundle });
+    } catch (error: any) {
+      logError('Failed to update time range', error, {
+        id: req.params.id,
+      });
+      const statusCode = error.message.includes('não encontrado') ? 404 : 500;
+      res.status(statusCode).json({ message: error.message || 'Erro ao atualizar intervalo do gráfico' });
     }
   }
 }

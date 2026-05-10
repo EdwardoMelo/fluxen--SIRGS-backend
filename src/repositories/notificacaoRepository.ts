@@ -1,7 +1,6 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../database';
 import { Notificacao } from '../types/Notificacao';
-
-const prisma = new PrismaClient();
 
 export class NotificacaoRepository {
   async create(data: { id_usuario: number; descricao: string }): Promise<Notificacao> {

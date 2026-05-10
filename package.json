@@ -5,15 +5,17 @@
   "scripts": {
     "start": "npm run docker:up && node src/scripts/wait-for-rabbitmq.js && npm run start:all",
     "start:pm2": "npm run docker:up && node src/scripts/wait-for-rabbitmq.js && pm2 start ecosystem.config.js",
-    "start:all": "concurrently \"npm run start:api\" \"npm run start:worker\"",
+    "start:all": "concurrently \"npm run start:api\" \"npm run start:worker\" \"npm run start:dashboard-worker\"",
     "start:api": "node dist/index.js",
     "start:worker": "node dist/wokers/logsWorker.js",
+    "start:dashboard-worker": "node dist/wokers/dashboardWorker.js",
     "dev": "npm run docker:up && node src/scripts/wait-for-rabbitmq.js && npm run dev:all",
     "dev:podman": "npm run podman:up && node src/scripts/wait-for-rabbitmq.podman.js && npm run dev:podman:all",
-    "dev:podman:all": "concurrently --names \"API,WORKER\" --prefix-colors \"blue,green\" \"nodemon --config nodemon.api.json\" \"nodemon --config nodemon.worker.json\"",
-    "dev:all": "concurrently --names \"API,WORKER\" --prefix-colors \"blue,green\" \"npm run dev:api\" \"npm run dev:worker\"",
+    "dev:podman:all": "concurrently --names \"API,WORKER,DASHBOARD\" --prefix-colors \"blue,green,magenta\" \"nodemon --config nodemon.api.json\" \"nodemon --config nodemon.worker.json\" \"nodemon --config nodemon.dashboard-worker.json\"",
+    "dev:all": "concurrently --names \"API,WORKER,DASHBOARD\" --prefix-colors \"blue,green,magenta\" \"npm run dev:api\" \"npm run dev:worker\" \"npm run dev:dashboard-worker\"",
     "dev:api": "tsx watch src/index.ts",
     "dev:worker": "tsx watch src/wokers/logsWorker.ts",
+    "dev:dashboard-worker": "tsx watch src/wokers/dashboardWorker.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
@@ -27,7 +29,8 @@
     "pm2:delete": "pm2 delete ecosystem.config.js",
     "pm2:logs": "pm2 logs",
     "pm2:status": "pm2 status",
-    "pm2:monit": "pm2 monit"
+    "pm2:monit": "pm2 monit",
+    "deploy-production": "python scripts/deploy_production.py"
   },
   "dependencies": {
     "@mui/x-date-pickers": "^8.22.1",
@@ -40,6 +43,7 @@
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "ioredis": "^5.10.1",

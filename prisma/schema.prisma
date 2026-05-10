@@ -93,6 +93,7 @@ model usuario {
   system_announcement           system_announcement[]
   created_by_usuario            usuario?                        @relation("UsuarioCreatedBy", fields: [created_by], references: [id], map: "usuario_created_by")
   created_usuarios              usuario[]                       @relation("UsuarioCreatedBy")
+  usuario_dashboard_bundle      usuario_dashboard_bundle?
   usuario_equipamento_dashboard usuario_equipamento_dashboard[]
   usuario_perfil                usuario_perfil[]
   usuario_perfil_cliente        usuario_perfil_cliente[]
@@ -272,6 +273,21 @@ model system_announcement {
   @@index([is_active])
   @@index([starts_at])
   @@index([type])
+}
+
+model usuario_dashboard_bundle {
+  id             Int      @id @default(autoincrement())
+  id_tenant      Int?
+  id_usuario     Int      @unique(map: "usuario_dashboard_bundle_user_unique")
+  bundle_json    Json
+  schema_version Int      @default(1)
+  source         String?  @db.VarChar(20)
+  updated_at     DateTime @default(now()) @db.DateTime(0)
+  created_at     DateTime @default(now()) @db.DateTime(0)
+  usuario        usuario  @relation(fields: [id_usuario], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "usuario_dashboard_bundle_usuario_fk")
+
+  @@index([id_tenant], map: "usuario_dashboard_bundle_tenant_idx")
+  @@index([updated_at])
 }
 
 enum system_announcement_type {

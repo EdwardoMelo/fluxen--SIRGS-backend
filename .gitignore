@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 logs/
+migrations/
 
 # Podman dev (local optional workflow)
 docker-compose.podman.yml

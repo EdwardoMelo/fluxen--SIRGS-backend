@@ -16,6 +16,7 @@ interface SendEmailOptions {
   subject: string;
   text?: string;
   html?: string;
+  replyTo?: string;
   attachments?: Array<{
     filename: string;
     path?: string;
@@ -81,6 +82,7 @@ class EmailService {
         subject: options.subject,
         text: options.text,
         html: options.html,
+        replyTo: options.replyTo,
         attachments: options.attachments,
       };
 

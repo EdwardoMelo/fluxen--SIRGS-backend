@@ -1,15 +1,24 @@
 import { Request, Response } from 'express';
 import { EquipamentoLogService } from '../services/equipamentoLogService';
+import { UsuarioEquipamentoDashboardService } from '../services/usuarioEquipamentoDashboardService';
 import { CreateEquipamentoLogsDTO } from '../dto/HttpRequestDTOS/CreateEquipamentoLogsDTO';
-import { logError, logWarn } from '../utils/logger';
+import { logError, logInfo, logWarn } from '../utils/logger';
 
 export class EquipamentoLogController {
   private equipamentoLogService = new EquipamentoLogService();
+  private usuarioDashboardService = new UsuarioEquipamentoDashboardService();
 
   async receiveLogsFromEquipamento(req: Request, res: Response): Promise<void> {
     try {
       const data = req.body as CreateEquipamentoLogsDTO;
       const equipamentoId = req.equipamento?.id;
+      const logsCount = Array.isArray(data?.logs) ? data.logs.length : 0;
+
+      logInfo('Equipment logs request received', {
+        equipamentoId,
+        logsCount,
+        hasTenant: req.equipamento?.id_tenant != null
+      });
 
       // Validação de métricas duplicadas
       if (data && data.logs && Array.isArray(data.logs)) {
@@ -29,9 +38,18 @@ export class EquipamentoLogController {
 
       // Tentar processamento assíncrono via RabbitMQ primeiro
       try {
+        logInfo('Attempting async log processing via RabbitMQ', {
+          equipamentoId,
+          logsCount
+        });
         const sentToQueue = await this.equipamentoLogService.sendLogsToRabbitMQ(data);
         
         if (sentToQueue) {
+          logInfo('Logs accepted for async processing', {
+            equipamentoId,
+            logsCount,
+            processingMode: 'async'
+          });
           res.status(202).json({ 
             message: 'Logs recebidos e em processamento',
             accepted: true,
@@ -50,7 +68,23 @@ export class EquipamentoLogController {
       // Fallback: processamento síncrono (fila cheia ou RabbitMQ indisponível)
       // Obter tenantId do equipamento autenticado
       const tenantId = req.equipamento?.id_tenant;
+      logWarn('Using sync fallback for equipment logs processing', {
+        equipamentoId,
+        tenantId,
+        logsCount
+      });
       const group = await this.equipamentoLogService.createManyEquipamentoLogs(data, tenantId);
+      if (equipamentoId) {
+        logInfo('Refreshing dashboard bundles after sync log processing', {
+          equipamentoId
+        });
+        await this.usuarioDashboardService.refreshBundlesByEquipamento(equipamentoId, 'logs');
+      }
+      logInfo('Equipment logs processed synchronously', {
+        equipamentoId,
+        logsCount,
+        processingMode: 'sync'
+      });
       res.status(201).json({
         ...group,
         processingMode: 'sync'

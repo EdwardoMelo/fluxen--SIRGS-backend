@@ -1,9 +1,7 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../database';
 import { EquipamentoLogGrupo } from '../types/EquipamentoLogGrupo';
 import { toBrazilianTimezone } from '../utils/dateUtils';
-
-// Criar instância própria do Prisma para evitar dependência circular
-const prisma = new PrismaClient();
 
 export interface PaginationOptions {
   page?: number;

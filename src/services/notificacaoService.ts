@@ -3,10 +3,8 @@ import { Notificacao } from '../types/Notificacao';
 import { EquipamentoLogRepository } from '../repositories/equipamentoLogRepository';
 import { EquipamentoMetricaRepository } from '../repositories/equipamentoMetricaRepository';
 import { Cliente } from '../types/Cliente';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../database';
 import { logError } from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 export class NotificacaoService {
   private notificacaoRepository = new NotificacaoRepository();

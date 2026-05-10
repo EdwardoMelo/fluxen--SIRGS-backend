@@ -1,14 +1,13 @@
 import { EquipamentoLogRepository, PaginationOptions } from "../repositories/equipamentoLogRepository";
 import { EquipamentoMetricaRepository } from "../repositories/equipamentoMetricaRepository";
 import { EquipamentoMetrica } from "../types/EquipamentoMetrica";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../database";
 import { CreateEquipamentoLogsDTO } from "../dto/HttpRequestDTOS/CreateEquipamentoLogsDTO";
 import { rabbitMQService } from "./rabbitmqService";
-import { logError } from "../utils/logger";
+import { logError, logInfo, logWarn } from "../utils/logger";
 import { NotificacaoService } from "./notificacaoService";
 import { toBrazilianTimezone } from "../utils/dateUtils";
-
-const prisma = new PrismaClient();
 
 export class EquipamentoLogService {
   private equipamentoLogRepository: EquipamentoLogRepository;
@@ -73,8 +72,19 @@ export class EquipamentoLogService {
 
   async sendLogsToRabbitMQ(data: CreateEquipamentoLogsDTO): Promise<boolean> {
     try {
+      const equipamentoId = data.logs?.[0]?.id_equipamento;
+      const logsCount = Array.isArray(data.logs) ? data.logs.length : 0;
+
+      logInfo('Starting sendLogsToRabbitMQ', {
+        equipamentoId,
+        logsCount
+      });
+
       // Verificar se RabbitMQ está conectado
       if (!rabbitMQService.isConnected()) {
+        logInfo('RabbitMQ is disconnected, connecting before publish', {
+          equipamentoId
+        });
         await rabbitMQService.connect();
       }
 
@@ -82,8 +92,16 @@ export class EquipamentoLogService {
       const published = await rabbitMQService.publishLogs(data);
 
       if (published) {
+        logInfo('Logs successfully published to RabbitMQ', {
+          equipamentoId,
+          logsCount
+        });
         return true;
       }
+      logWarn('RabbitMQ publish returned false', {
+        equipamentoId,
+        logsCount
+      });
       return false;
     } catch (error) {
       logError('Failed to send logs to RabbitMQ', error, {
