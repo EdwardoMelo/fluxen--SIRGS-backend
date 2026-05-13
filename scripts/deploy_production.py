@@ -33,8 +33,18 @@ def required_env(name: str) -> str:
     return value
 
 
+GIT_REMOTE = "origin"
+DEPLOY_BRANCH = "qa"
+
 # Must match `name` entries in ecosystem.config.js
 PM2_APP_NAMES = ("sirgs-api", "sirgs-worker", "sirgs-dashboard-worker")
+
+
+def remote_git_update_command() -> str:
+    """Fetch from origin and align local branch to origin/qa (explicit remote + branch)."""
+    b = DEPLOY_BRANCH
+    r = GIT_REMOTE
+    return f"git fetch {r} {b} && git checkout -B {b} {r}/{b}"
 
 
 def remote_pm2_sync_command() -> str:
@@ -60,7 +70,8 @@ def main() -> int:
     remote_command = " && ".join(
         [
             f"cd {backend_path}",
-            "git pull",
+            remote_git_update_command(),
+            "npm ci",
             "npx prisma generate",
             "npm run build",
             remote_pm2_sync_command(),

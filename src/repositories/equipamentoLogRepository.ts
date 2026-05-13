@@ -3,6 +3,9 @@ import { prisma } from '../database';
 import { EquipamentoLogGrupo } from '../types/EquipamentoLogGrupo';
 import { toBrazilianTimezone } from '../utils/dateUtils';
 
+/** Máximo de grupos (`equipamento_log_grupo`) na listagem da tela de logs e fluxos equivalentes. */
+export const MAX_EQUIPAMENTO_LOG_GRUPOS_PARA_TABELA = 10_000;
+
 export interface PaginationOptions {
   page?: number;
   pageSize?: number;
@@ -12,7 +15,10 @@ export interface PaginationOptions {
 
 export interface GroupedLogsResult {
   groups: EquipamentoLogGrupo[];
-  total: number;
+  /** Próxima página existe (listagem de logs sem contagem total). */
+  hasNextPage?: boolean;
+  /** Usado em `findGroupedByTimestampWithTimeRange` (gráficos). */
+  total?: number;
 }
 
 export class EquipamentoLogRepository {
@@ -58,24 +64,29 @@ export class EquipamentoLogRepository {
     const pageSize = Math.max(Math.min(options.pageSize ?? 50, 500), 1);
     const skip = (page - 1) * pageSize;
     const take = pageSize;
+    const cap = MAX_EQUIPAMENTO_LOG_GRUPOS_PARA_TABELA;
 
     const executor = transaction ?? prisma;
 
-    const [groups, total] = await Promise.all([
-      executor.equipamento_log_grupo.findMany({
-        where: { id_equipamento },
-        orderBy: {
-          timestamp: 'desc'
-        },
-        skip,
-        take
-      }),
-      executor.equipamento_log_grupo.count({
-        where: { id_equipamento }
-      })
-    ]);
+    if (skip >= cap) {
+      return { groups: [], hasNextPage: false };
+    }
 
-    return { groups, total };
+    const effectiveTake = Math.min(take, cap - skip);
+
+    const groups = await executor.equipamento_log_grupo.findMany({
+      where: { id_equipamento },
+      orderBy: {
+        timestamp: 'desc',
+      },
+      skip,
+      take: effectiveTake,
+    });
+
+    const hasNextPage =
+      groups.length > 0 && groups.length === effectiveTake && skip + effectiveTake < cap;
+
+    return { groups, hasNextPage };
   }
 
   /**
@@ -130,31 +141,32 @@ export class EquipamentoLogRepository {
           id_equipamento,
           timestamp: {
             gte: startDate,
-            lte: endDate
-          }
+            lte: endDate,
+          },
         },
         orderBy: {
-          timestamp: 'asc' // Para gráficos, ordem crescente faz mais sentido
+          timestamp: 'asc', // Para gráficos, ordem crescente faz mais sentido
         },
         skip,
-        take
+        take,
       }),
       executor.equipamento_log_grupo.count({
         where: {
           id_equipamento,
           timestamp: {
             gte: startDate,
-            lte: endDate
-          }
-        }
-      })
+            lte: endDate,
+          },
+        },
+      }),
     ]);
 
     return { groups, total };
   }
 
   /**
-   * Busca todos os logs em um intervalo de datas (sem paginação - para relatórios)
+   * Logs em um intervalo de datas (ex.: relatórios via `getLogsTableData`).
+   * No máximo {@link MAX_EQUIPAMENTO_LOG_GRUPOS_PARA_TABELA} grupos, os mais recentes dentro do intervalo, em ordem cronológica crescente.
    */
   async findByDateRange(
     id_equipamento: number,
@@ -163,19 +175,23 @@ export class EquipamentoLogRepository {
     transaction?: Prisma.TransactionClient
   ): Promise<EquipamentoLogGrupo[]> {
     const executor = transaction ?? prisma;
+    const cap = MAX_EQUIPAMENTO_LOG_GRUPOS_PARA_TABELA;
 
-    return executor.equipamento_log_grupo.findMany({
+    const grupos = await executor.equipamento_log_grupo.findMany({
       where: {
         id_equipamento,
         timestamp: {
           gte: startDate,
-          lte: endDate
-        }
+          lte: endDate,
+        },
       },
       orderBy: {
-        timestamp: 'asc'
-      }
+        timestamp: 'desc',
+      },
+      take: cap,
     });
+
+    return grupos.reverse();
   }
     
 }

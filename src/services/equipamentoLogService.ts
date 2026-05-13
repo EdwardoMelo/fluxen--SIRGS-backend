@@ -316,9 +316,6 @@ export class EquipamentoLogService {
         afterGroupId,
         { take: pageSize }
       );
-      const total = await prisma.equipamento_log_grupo.count({
-        where: { id_equipamento }
-      });
       const columnsArray = this.buildLogTableColumns(metrics);
       const rows = this.buildRowsFromGroups(groups, metrics);
       const { groups: recentGroups } = await this.equipamentoLogRepository.findGroupedByTimestamp(
@@ -335,24 +332,25 @@ export class EquipamentoLogService {
         pagination: {
           page: 1,
           pageSize,
-          totalItems: total,
-          totalPages: total > 0 ? Math.ceil(total / pageSize) : 0,
+          totalItems: null,
+          totalPages: null,
+          hasNextPage: false,
           incremental: true
         }
       };
     }
 
     let groups: any[];
-    let total: number;
+    let hasNextPage = false;
 
-    // Se datas forem fornecidas, usar findByDateRange (sem paginação)
+    // Se datas forem fornecidas, buscar até MAX_EQUIPAMENTO_LOG_GRUPOS_PARA_TABELA grupos (mais recentes no intervalo)
     if (startDate && endDate) {
       groups = await this.equipamentoLogRepository.findByDateRange(
         id_equipamento,
         startDate,
         endDate
       );
-      total = groups.length;
+      hasNextPage = false;
     } else {
     // Caso contrário, usar paginação normal
       const page = Math.max(paginationOptions.page ?? 1, 1);
@@ -364,7 +362,7 @@ export class EquipamentoLogService {
       
       groups = result.groups;
 
-      total = result.total;
+      hasNextPage = result.hasNextPage ?? false;
     }
 
     const columnsArray = this.buildLogTableColumns(metrics);
@@ -394,8 +392,9 @@ export class EquipamentoLogService {
       pagination: {
         page,
         pageSize,
-        totalItems: total,
-        totalPages: total > 0 ? Math.ceil(total / pageSize) : 0
+        totalItems: null,
+        totalPages: null,
+        hasNextPage
       }
     };
   }
