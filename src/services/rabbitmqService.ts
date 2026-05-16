@@ -315,7 +315,9 @@ class RabbitMQService {
             throw new Error('RabbitMQ channel not initialized');
         }
 
-        await this.channel.prefetch(10);
+        // Um refresh por vez: cada job dispara dezenas de queries (vários usuários × gráficos em paralelo).
+        const dashboardPrefetch = Number(process.env.RABBITMQ_DASHBOARD_PREFETCH || '1');
+        await this.channel.prefetch(Number.isFinite(dashboardPrefetch) && dashboardPrefetch > 0 ? dashboardPrefetch : 1);
 
         await this.channel.consume(this.dashboardBundleQueueName, async (message) => {
             if (!message) return;

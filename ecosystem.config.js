@@ -6,7 +6,9 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        DATABASE_CONNECTION_LIMIT: '10',
+        DATABASE_POOL_TIMEOUT: '30'
       },
       error_file: './logs/pm2-api-error.log',
       out_file: './logs/pm2-api-out.log',
@@ -22,7 +24,9 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        DATABASE_CONNECTION_LIMIT: '5',
+        DATABASE_POOL_TIMEOUT: '30'
       },
       error_file: './logs/pm2-worker-error.log',
       out_file: './logs/pm2-worker-out.log',
@@ -38,7 +42,10 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        DATABASE_CONNECTION_LIMIT: '8',
+        DATABASE_POOL_TIMEOUT: '60',
+        RABBITMQ_DASHBOARD_PREFETCH: '1'
       },
       error_file: './logs/pm2-dashboard-worker-error.log',
       out_file: './logs/pm2-dashboard-worker-out.log',
