@@ -5,4 +5,5 @@ export interface UpdateEquipamentoMetricaDTO {
   valor_maximo?: number;
   alarme_minimo?: number | null;
   alarme_maximo?: number | null;
+  texto_alarme?: string | null;
 }

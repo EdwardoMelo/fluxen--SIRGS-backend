@@ -200,7 +200,7 @@ export class EquipamentoLogService {
       // Remover campos de alerta também para comparação
       const sanitized: any = {};
       Object.keys(rest).forEach(key => {
-        if (!key.endsWith('_alert')) {
+        if (!key.endsWith('_alert') && !key.endsWith('_device_alarme') && !key.endsWith('_alarme_texto')) {
           sanitized[key] = rest[key];
         }
       });
@@ -283,11 +283,22 @@ export class EquipamentoLogService {
 
       parsedLogs.forEach((log: any) => {
         const valorConvertido = this.roundToTwoDecimals(log.valor_convertido);
-        row[`metrica_${log.id_metrica}`] = valorConvertido;
-        // Verificar apenas se valorConvertido existe (para compatibilidade com logs antigos)
+        const metricField = `metrica_${log.id_metrica}`;
+        row[metricField] = valorConvertido;
+
+        const equipamentoMetrica = metrics.find(m => m.id_metrica === log.id_metrica);
+
+        if (log.alarme === true) {
+          const textoAlarme = equipamentoMetrica?.texto_alarme?.trim();
+          if (textoAlarme) {
+            row[`${metricField}_device_alarme`] = true;
+            row[`${metricField}_alarme_texto`] = textoAlarme;
+          }
+        }
+
         if (valorConvertido !== undefined) {
           const alert = this.checkValueLimits(valorConvertido, log.id_metrica, metrics);
-          row[`metrica_${log.id_metrica}_alert`] = alert;
+          row[`${metricField}_alert`] = alert;
         }
       });
 

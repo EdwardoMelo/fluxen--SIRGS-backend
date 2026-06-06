@@ -56,7 +56,7 @@ async function processLogs(data: any): Promise<void> {
 
 async function processReportRequest(data: any): Promise<void> {
     try {
-        const { id_equipamento, userId, startDate, endDate, format, email } = data;
+        const { id_equipamento, userId, startDate, endDate, format, email, metricIds } = data;
 
         // Validar email
         if (!email) {
@@ -82,7 +82,12 @@ async function processReportRequest(data: any): Promise<void> {
         if (format === 'xlsx') {
             fileBuffer = await reportService.generateXLSXReport(id_equipamento, start, end);
         } else if (format === 'pdf') {
-            fileBuffer = await reportService.generatePDFReport(id_equipamento, start, end);
+            fileBuffer = await reportService.generatePDFReport(
+                id_equipamento,
+                start,
+                end,
+                Array.isArray(metricIds) ? metricIds.map(Number) : undefined
+            );
         } else {
             throw new Error(`Unsupported format: ${format}`);
         }

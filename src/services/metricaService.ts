@@ -23,6 +23,7 @@ export class MetricaService {
     tenantId: number,
     alarme_minimo: number | null = null,
     alarme_maximo: number | null = null,
+    texto_alarme: string | null = null,
     userId?: number
   ): Promise<Metrica | null> {
     // Verificar permissão se userId foi fornecido
@@ -40,7 +41,8 @@ export class MetricaService {
       valor_maximo,
       tenantId,
       alarme_minimo,
-      alarme_maximo
+      alarme_maximo,
+      texto_alarme
     );
   }
 

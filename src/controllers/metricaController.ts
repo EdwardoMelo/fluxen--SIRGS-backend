@@ -62,7 +62,7 @@ export class MetricaController {
   async associateMetricToEquipamento(req: Request, res: Response): Promise<void> {
     try {
       const { id_equipamento, id_metrica } = req.params;
-      const { valor_minimo, valor_maximo, alarme_minimo, alarme_maximo } = req.body;
+      const { valor_minimo, valor_maximo, alarme_minimo, alarme_maximo, texto_alarme } = req.body;
       const userId = req.user?.id ? Number(req.user.id) : undefined;
       const tenantId = req.tenantId;
 
@@ -79,6 +79,7 @@ export class MetricaController {
         tenantId,
         alarme_minimo !== undefined && alarme_minimo !== null ? Number(alarme_minimo) : null,
         alarme_maximo !== undefined && alarme_maximo !== null ? Number(alarme_maximo) : null,
+        typeof texto_alarme === 'string' && texto_alarme.trim() !== '' ? texto_alarme.trim() : null,
         userId
       );
       res.json(metrica);

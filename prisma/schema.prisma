@@ -45,6 +45,7 @@ model equipamento_metricas {
   valor_maximo   Float
   alarme_minimo  Float?      @db.Float
   alarme_maximo  Float?      @db.Float
+  texto_alarme   String?     @db.VarChar(255)
   equipamento    equipamento @relation(fields: [id_equipamento], references: [id], onDelete: Cascade, map: "equipamento_metrica_id_equipamento_fkey")
   metrica        metrica     @relation(fields: [id_metrica], references: [id], onDelete: Cascade, map: "equipamento_metrica_id_metrica_fkey")
 

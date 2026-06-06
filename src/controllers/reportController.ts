@@ -8,7 +8,7 @@ export class ReportController {
   async requestReport(req: Request, res: Response): Promise<void> {
     try {
       const { id_equipamento } = req.params;
-      const { startDate, endDate, format, email } = req.body;
+      const { startDate, endDate, format, email, metricIds } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -29,6 +29,27 @@ export class ReportController {
           message: 'Formato deve ser "xlsx" ou "pdf"' 
         });
         return;
+      }
+
+      let normalizedMetricIds: number[] | undefined;
+      if (format === 'pdf') {
+        if (!Array.isArray(metricIds) || metricIds.length === 0) {
+          res.status(400).json({
+            message: 'Selecione ao menos uma coluna para o relatório PDF',
+          });
+          return;
+        }
+        if (metricIds.length > 8) {
+          res.status(400).json({
+            message: 'Máximo de 8 colunas permitidas no relatório PDF',
+          });
+          return;
+        }
+        normalizedMetricIds = metricIds.map((id: unknown) => Number(id));
+        if (normalizedMetricIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+          res.status(400).json({ message: 'Colunas selecionadas inválidas' });
+          return;
+        }
       }
 
       // Validar datas
@@ -89,6 +110,7 @@ export class ReportController {
           endDate: end.toISOString(),
           format,
           email: recipientEmail,
+          metricIds: normalizedMetricIds,
         });
 
         if (sentToQueue) {

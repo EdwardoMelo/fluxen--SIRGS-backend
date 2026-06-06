@@ -6,7 +6,7 @@ export interface CreateEquipamentoLogDTO {
   valor_convertido?: number;
   id_equipamento_metrica?: number;
   timestamp?: Date;
-  
+  alarme?: boolean;
 }
 
 export interface CreateEquipamentoLogsDTO {
