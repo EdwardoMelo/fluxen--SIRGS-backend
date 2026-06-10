@@ -14,6 +14,20 @@ export interface EquipmentFilters {
 export class EquipamentoController {
   private equipamentoService = new EquipamentoService();
 
+  private validateTimeoutOnlineSegundos(value: unknown): string | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      return 'timeout_online_segundos deve ser um inteiro maior que zero';
+    }
+    if (parsed > 86400) {
+      return 'timeout_online_segundos não pode exceder 86400 segundos (24h)';
+    }
+    return null;
+  }
+
   async getEquipamentos(req: Request, res: Response): Promise<void> {
     const filters: EquipmentFilters = req.query ? req.query as any : {};
     const userId = req.query.userId as string;
@@ -65,6 +79,12 @@ export class EquipamentoController {
         return;
       }
 
+      const timeoutError = this.validateTimeoutOnlineSegundos(req.body?.timeout_online_segundos);
+      if (timeoutError) {
+        res.status(400).json({ message: timeoutError });
+        return;
+      }
+
       const equipamento = await this.equipamentoService.createEquipamento(req.body, tenantId, userId);
       res.status(201).json(equipamento);
     } catch (error: any) {
@@ -80,6 +100,12 @@ export class EquipamentoController {
   async updateEquipamento(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     try {
+      const timeoutError = this.validateTimeoutOnlineSegundos(req.body?.timeout_online_segundos);
+      if (timeoutError) {
+        res.status(400).json({ message: timeoutError });
+        return;
+      }
+
       const equipamento = await this.equipamentoService.updateEquipamento(Number(id), req.body);
       res.json(equipamento);
     } catch (error) {
@@ -118,6 +144,39 @@ export class EquipamentoController {
     } catch (error) {
       logError('Failed to regenerate API key', error, { equipamentoId: id });
       res.status(500).json({ message: 'Erro ao regenerar API key' });
+    }
+  }
+
+  async getOnlineStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const tenantId = req.tenantId;
+      const userId = req.user?.id ? Number(req.user.id) : undefined;
+
+      if (!tenantId) {
+        res.status(400).json({ message: 'Tenant ID is required' });
+        return;
+      }
+
+      const status = await this.equipamentoService.getOnlineStatus(
+        Number(id),
+        tenantId,
+        userId
+      );
+
+      if (!status) {
+        res.status(404).json({ message: 'Equipamento não encontrado' });
+        return;
+      }
+
+      res.json(status);
+    } catch (error: any) {
+      if (error.message?.includes('permissão')) {
+        res.status(403).json({ message: error.message });
+        return;
+      }
+      logError('Failed to get equipment online status', error, { equipamentoId: req.params.id });
+      res.status(500).json({ message: 'Erro ao buscar status do equipamento' });
     }
   }
 }

@@ -1,12 +1,21 @@
 import { EquipmentFilters } from '../controllers/equipamentoController';
 import { EquipamentoRepository } from '../repositories/equipamentoRepository';
+import { EquipamentoLogRepository } from '../repositories/equipamentoLogRepository';
 import { UsuarioRepository } from '../repositories/usuarioRepository';
 import { Equipamento } from '../types/Equipamento';
+import { EquipamentoOnlineStatus } from '../types/EquipamentoOnlineStatus';
 import { Usuario } from '../types/Usuario';
 import { prisma } from '../database';
+import {
+  DEFAULT_TIMEOUT_ONLINE_SEGUNDOS,
+  STATUS_LATENCY_BUFFER_SEGUNDOS,
+} from '../constants/equipamentoStatusConstants';
+import { hasEquipamentoPermission } from '../utils/equipamentoPermissionHelper';
+import { formatISOString, getElapsedMsSinceLogTimestamp } from '../utils/dateUtils';
 
 export class EquipamentoService {
   private equipamentoRepository = new EquipamentoRepository();
+  private equipamentoLogRepository = new EquipamentoLogRepository();
   private usuarioRepository = new UsuarioRepository();
 
   async getEquipamentos(userId: number, filters: EquipmentFilters, tenantId: number): Promise<Equipamento[] | void[]> {
@@ -79,5 +88,51 @@ export class EquipamentoService {
     
     // Gera uma nova
     return this.generateApiKey(equipamentoId);
+  }
+
+  async getOnlineStatus(
+    id: number,
+    tenantId: number,
+    userId?: number
+  ): Promise<EquipamentoOnlineStatus | null> {
+    if (userId) {
+      const hasPermission = await hasEquipamentoPermission(userId, id);
+      if (!hasPermission) {
+        throw new Error('Usuário não tem permissão para visualizar status deste equipamento');
+      }
+    }
+
+    const equipamento = await this.equipamentoRepository.findById(id, tenantId);
+    if (!equipamento) {
+      return null;
+    }
+
+    const timeoutOnlineSegundos =
+      equipamento.timeout_online_segundos ?? DEFAULT_TIMEOUT_ONLINE_SEGUNDOS;
+    const effectiveTimeoutSegundos =
+      timeoutOnlineSegundos + STATUS_LATENCY_BUFFER_SEGUNDOS;
+
+    const lastLogAt = await this.equipamentoLogRepository.findLatestLogTimestamp(id);
+
+    if (!lastLogAt) {
+      return {
+        isOnline: false,
+        lastLogAt: null,
+        timeoutOnlineSegundos,
+        latencyBufferSegundos: STATUS_LATENCY_BUFFER_SEGUNDOS,
+        effectiveTimeoutSegundos,
+      };
+    }
+
+    const elapsedMs = getElapsedMsSinceLogTimestamp(lastLogAt);
+    const isOnline = elapsedMs <= effectiveTimeoutSegundos * 1000;
+
+    return {
+      isOnline,
+      lastLogAt: formatISOString(lastLogAt),
+      timeoutOnlineSegundos,
+      latencyBufferSegundos: STATUS_LATENCY_BUFFER_SEGUNDOS,
+      effectiveTimeoutSegundos,
+    };
   }
 }

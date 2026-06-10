@@ -193,7 +193,18 @@ export class EquipamentoLogRepository {
 
     return grupos.reverse();
   }
-    
+
+  async findLatestLogTimestamp(
+    id_equipamento: number,
+    transaction?: Prisma.TransactionClient
+  ): Promise<Date | null> {
+    const executor = transaction ?? prisma;
+    const latest = await executor.equipamento_log_grupo.findFirst({
+      where: { id_equipamento },
+      orderBy: { id: 'desc' },
+      select: { timestamp: true },
+    });
+
+    return latest?.timestamp ?? null;
+  }
 }
-
-

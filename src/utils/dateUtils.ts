@@ -70,3 +70,13 @@ export function formatTimestamp(value: any): string {
   return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
+/** "Agora" no mesmo referencial usado ao gravar timestamps de log de equipamento. */
+export function getLogReferenceNow(): Date {
+  return toBrazilianTimezone(new Date());
+}
+
+/** Tempo decorrido (ms) desde um timestamp de log, comparável ao referencial de gravação. */
+export function getElapsedMsSinceLogTimestamp(lastLogAt: Date): number {
+  return getLogReferenceNow().getTime() - new Date(lastLogAt).getTime();
+}
+

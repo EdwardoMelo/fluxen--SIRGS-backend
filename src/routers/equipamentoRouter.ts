@@ -19,6 +19,12 @@ router.get(
   validateTenant,
   equipamentoController.getEquipamentoById.bind(equipamentoController)
 );
+router.get(
+  "/equipamentos/:id/online-status",
+  authenticateToken,
+  validateTenant,
+  equipamentoController.getOnlineStatus.bind(equipamentoController)
+);
 router.post(
   "/equipamentos",
   authenticateToken,

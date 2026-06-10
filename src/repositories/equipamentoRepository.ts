@@ -155,7 +155,11 @@ export class EquipamentoRepository {
             nome: data.nome || '',
             id_cliente: data.id_cliente,
             id_tenant: tenantId,
-            api_key: null, // Será atualizado após a criação
+            api_key: null,
+            timeout_online_segundos:
+              data.timeout_online_segundos !== undefined && data.timeout_online_segundos !== null
+                ? Number(data.timeout_online_segundos)
+                : null,
           },
           include: this.include(),
         })
@@ -177,7 +181,11 @@ export class EquipamentoRepository {
             nome: data.nome || '',
             id_cliente: data.id_cliente,
             id_tenant: tenantId,
-            api_key: null, // Será atualizado após a criação
+            api_key: null,
+            timeout_online_segundos:
+              data.timeout_online_segundos !== undefined && data.timeout_online_segundos !== null
+                ? Number(data.timeout_online_segundos)
+                : null,
           },
           include: this.include(),
         })
