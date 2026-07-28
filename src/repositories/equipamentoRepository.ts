@@ -217,13 +217,27 @@ export class EquipamentoRepository {
   };
 
   delete = async (id: number, tx?: Prisma.TransactionClient): Promise<void> => {
+    const deleteWithChildren = async (client: Prisma.TransactionClient) => {
+      // Remove filhos antes do equipamento (cobre FKs sem ON DELETE CASCADE no banco).
+      await client.usuario_equipamento_dashboard.deleteMany({
+        where: { id_equipamento: id },
+      });
+      await client.equipamento_metricas.deleteMany({
+        where: { id_equipamento: id },
+      });
+      await client.equipamento_log_grupo.deleteMany({
+        where: { id_equipamento: id },
+      });
+      await client.equipamento.delete({ where: { id } });
+    };
+
     if (tx) {
-      await tx.equipamento.delete({ where: { id } });
+      await deleteWithChildren(tx);
       return;
     }
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      await tx.equipamento.delete({ where: { id } });
+    await prisma.$transaction(async (client: Prisma.TransactionClient) => {
+      await deleteWithChildren(client);
     });
   };
 

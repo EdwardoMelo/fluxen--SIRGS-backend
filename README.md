@@ -37,7 +37,7 @@ Antes de começar, certifique-se de ter instalado:
 
 - **Node.js** (versão 18 ou superior)
 - **npm** ou **yarn**
-- **Docker** e **Docker Compose** (para RabbitMQ)
+- **Podman** (para RabbitMQ em desenvolvimento local)
 - **MySQL** (local ou remoto)
 - **Git**
 
@@ -105,14 +105,14 @@ FRONTEND_URL=http://localhost:5173
 
 ### Modo Desenvolvimento
 
-O modo desenvolvimento inicia automaticamente o RabbitMQ via Docker e executa tanto a API quanto o Worker:
+O modo desenvolvimento inicia automaticamente o RabbitMQ via Podman e executa tanto a API quanto o Worker:
 
 ```bash
 npm run dev
 ```
 
 Este comando:
-- Inicia o RabbitMQ via Docker Compose
+- Inicia o RabbitMQ via Podman
 - Aguarda o RabbitMQ estar pronto
 - Inicia a API em modo watch (com hot reload)
 - Inicia o Worker em modo watch (processamento de logs)
@@ -150,16 +150,21 @@ npm run start:api
 npm run start:worker
 ```
 
-### Docker Compose
+### RabbitMQ (Podman / Docker)
 
 ```bash
-# Iniciar RabbitMQ
-npm run docker:up
+# Iniciar RabbitMQ (Podman — padrão local)
+npm run podman:up
 
 # Parar RabbitMQ
-npm run docker:down
+npm run podman:down
 
 # Ver logs do RabbitMQ
+npm run podman:logs
+
+# Alternativa com Docker Compose (se Docker estiver instalado)
+npm run docker:up
+npm run docker:down
 npm run docker:logs
 ```
 
@@ -326,10 +331,10 @@ npm run pm2:restart     # Reinicia PM2
 npm run pm2:logs        # Ver logs do PM2
 npm run pm2:status      # Status dos processos
 
-# Docker
-npm run docker:up       # Inicia RabbitMQ
-npm run docker:down     # Para RabbitMQ
-npm run docker:logs     # Logs do RabbitMQ
+# Podman (RabbitMQ local)
+npm run podman:up       # Inicia RabbitMQ
+npm run podman:down     # Para RabbitMQ
+npm run podman:logs     # Logs do RabbitMQ
 ```
 
 ## 🚢 Deploy
