@@ -38,6 +38,9 @@ DEPLOY_BRANCH = "qa"
 
 # Must match `name` entries in ecosystem.config.js
 PM2_APP_NAMES = ("sirgs-api", "sirgs-worker", "sirgs-dashboard-worker")
+RABBITMQ_CONTAINER = "equipamentos_sirgs_rabbitmq"
+RABBITMQ_READY_ATTEMPTS = 30
+RABBITMQ_READY_DELAY_SECONDS = 2
 
 
 def remote_git_update_command() -> str:
@@ -45,6 +48,28 @@ def remote_git_update_command() -> str:
     b = DEPLOY_BRANCH
     r = GIT_REMOTE
     return f"git fetch {r} {b} && git checkout -B {b} {r}/{b}"
+
+
+def remote_rabbitmq_up_command() -> str:
+    """Ensure RabbitMQ is running before PM2 workers start (they exit if AMQP is down)."""
+    return (
+        "docker compose up -d "
+        f"&& echo 'Waiting for RabbitMQ ({RABBITMQ_CONTAINER})...' "
+        f"&& i=1 "
+        f"&& while [ $i -le {RABBITMQ_READY_ATTEMPTS} ]; do "
+        f"if docker exec {RABBITMQ_CONTAINER} rabbitmq-diagnostics -q ping >/dev/null 2>&1; then "
+        "echo 'RabbitMQ is ready'; "
+        "break; "
+        "fi; "
+        f'echo "RabbitMQ not ready yet ($i/{RABBITMQ_READY_ATTEMPTS})"; '
+        f"sleep {RABBITMQ_READY_DELAY_SECONDS}; "
+        "i=$((i + 1)); "
+        "done "
+        f"&& if [ $i -gt {RABBITMQ_READY_ATTEMPTS} ]; then "
+        "echo 'RabbitMQ did not become ready in time' >&2; "
+        "exit 1; "
+        "fi"
+    )
 
 
 def remote_pm2_sync_command() -> str:
@@ -74,6 +99,7 @@ def main() -> int:
             "npm ci",
             "npx prisma generate",
             "npm run build",
+            remote_rabbitmq_up_command(),
             remote_pm2_sync_command(),
         ]
     )
