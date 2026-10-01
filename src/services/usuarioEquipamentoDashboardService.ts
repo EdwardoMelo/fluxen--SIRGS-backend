@@ -123,7 +123,7 @@ export class UsuarioEquipamentoDashboardService {
   }
 
   /**
-   * Atualiza só o gráfico do card cujo tipo mudou: reescreve o item no JSON e recalcula um chart (inclui intervalo linha/barras via buildOneChartEntry).
+   * Atualiza só o gráfico do card cujo tipo mudou: reescreve o item no JSON e recalcula um chart (inclui intervalo contador/barras via buildOneChartEntry).
    */
   async updateTipoGraficoInBundle(
     userId: number,
@@ -278,7 +278,7 @@ export class UsuarioEquipamentoDashboardService {
       };
     }
 
-    const tipo = item.id_tipo_grafico ?? 3;
+    const tipo = item.id_tipo_grafico ?? 4;
     const timeRange = this.resolveTimeRangeForChart(tipo, options?.timeRange);
     try {
       let chartData;
@@ -289,9 +289,10 @@ export class UsuarioEquipamentoDashboardService {
         case 2:
           chartData = await this.chartService.getBarChartData(item.id_equipamento, idMetrica, timeRange);
           break;
-        case 3:
+        case 3: // linha (legado) é exibida como contador
+        case 4:
         default:
-          chartData = await this.chartService.getLineChartData(item.id_equipamento, idMetrica, timeRange);
+          chartData = await this.chartService.getCounterChartData(item.id_equipamento, idMetrica, timeRange);
           break;
       }
       return { dashboardItemId: item.id, chartData, error: null };
@@ -357,7 +358,15 @@ export class UsuarioEquipamentoDashboardService {
     if (requested) {
       return requested;
     }
-    return tipo === 2 ? '1h' : '5min';
+    switch (tipo) {
+      case 2:
+        return '1h';
+      case 3:
+      case 4:
+        return '24h';
+      default:
+        return '5min';
+    }
   }
 
   /**

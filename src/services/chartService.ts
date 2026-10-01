@@ -27,6 +27,9 @@ export interface ChartData {
     currentValue?: number;
     maxValue?: number;
     minValue?: number;
+    periodStartValue?: number | null;
+    periodDelta?: number | null;
+    lastReadingAt?: string | null;
   };
 }
 
@@ -221,6 +224,84 @@ export class ChartService {
       };
     } catch (error) {
       logError('Error getting doughnut chart data', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Contador acumulador (totalizador): valor atual do último log e consumo no intervalo (último - primeiro).
+   */
+  async getCounterChartData(
+    id_equipamento: number,
+    id_metrica: number,
+    timeRange: TimeRange = '24h'
+  ): Promise<ChartData> {
+    try {
+      const { startDate, endDate } = this.calculateTimeRange(timeRange);
+      const [equipamentoMetrica, lastGroup, { groups }] = await Promise.all([
+        this.equipamentoMetricaRepository.findByEquipamentoAndMetrica(
+          id_equipamento,
+          id_metrica
+        ),
+        this.equipamentoLogRepository.findLatestGroupByEquipamento(id_equipamento),
+        this.equipamentoLogRepository.findGroupedByTimestampWithTimeRange(
+          id_equipamento,
+          startDate,
+          endDate,
+          { page: 1, pageSize: 20 }
+        ),
+      ]);
+
+      if (!equipamentoMetrica || !equipamentoMetrica.metrica) {
+        throw new Error('Métrica não encontrada para este equipamento');
+      }
+
+      if (!lastGroup) {
+        throw new Error('Nenhum log encontrado para este equipamento');
+      }
+
+      const currentValue = this.extractMetricValueFromGroup(lastGroup, id_metrica);
+
+      if (currentValue === null) {
+        throw new Error('Valor da métrica não encontrado no último log');
+      }
+
+      let periodStartValue: number | null = null;
+      for (const group of groups) {
+        const value = this.extractMetricValueFromGroup(group, id_metrica);
+        if (value !== null) {
+          periodStartValue = value;
+          break;
+        }
+      }
+
+      // Delta negativo indica reset do totalizador: consumo no período indeterminado
+      const rawDelta = periodStartValue !== null ? currentValue - periodStartValue : null;
+      const periodDelta = rawDelta !== null && rawDelta >= 0
+        ? Math.round(rawDelta * 100) / 100
+        : null;
+
+      return {
+        labels: [],
+        datasets: [{
+          label: `${equipamentoMetrica.metrica.nome} (${equipamentoMetrica.metrica.unidade})`,
+          data: [currentValue],
+        }],
+        metadata: {
+          metrica: {
+            id: equipamentoMetrica.metrica.id,
+            nome: equipamentoMetrica.metrica.nome,
+            unidade: equipamentoMetrica.metrica.unidade,
+          },
+          timeRange,
+          currentValue,
+          periodStartValue,
+          periodDelta,
+          lastReadingAt: formatISOString(lastGroup.timestamp) || null,
+        }
+      };
+    } catch (error) {
+      logError('Error getting counter chart data', error);
       throw error;
     }
   }

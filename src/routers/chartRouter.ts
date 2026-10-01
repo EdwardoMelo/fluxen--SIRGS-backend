@@ -28,5 +28,12 @@ router.get(
   chartController.getBarChartData.bind(chartController)
 );
 
+router.get(
+  '/charts/counter/:id_equipamento/:id_metrica',
+  authenticateToken,
+  validateTenant,
+  chartController.getCounterChartData.bind(chartController)
+);
+
 export default router;
 
